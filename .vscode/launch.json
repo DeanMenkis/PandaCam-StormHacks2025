@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "lldb",
+      "request": "launch",
+      "args": [],
+      "cwd": "/Users/ilia/Desktop/Projects/CircuitBreakers-StormHacks-2025/rpi_firmware",
+      "program": "/Users/ilia/Desktop/Projects/CircuitBreakers-StormHacks-2025/rpi_firmware/build/Debug/outDebug"
+    }
+  ]
+}
