@@ -20,6 +20,10 @@ printer_state = {
     "failure_detected": False,
     "last_failure_time": None,
     "video_stream_active": False,
+    "print_status": "idle",  # idle, printing, paused, completed, failed
+    "print_progress": 0,  # 0-100
+    "print_time_elapsed": 0,  # in minutes
+    "print_time_remaining": 0,  # in minutes
     "timestamp": datetime.now().isoformat()
 }
 
@@ -123,6 +127,7 @@ def report_failure():
             printer_state["failure_detected"] = data["failure_detected"]
             if data["failure_detected"]:
                 printer_state["last_failure_time"] = datetime.now().isoformat()
+                printer_state["print_status"] = "failed"
             printer_state["timestamp"] = datetime.now().isoformat()
             
             return jsonify({
@@ -135,6 +140,44 @@ def report_failure():
             return jsonify({
                 "success": False,
                 "error": "Invalid data provided"
+            }), 400
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }), 500
+
+@app.route('/api/printer/print-status', methods=['POST'])
+def update_print_status():
+    """Update print status from external monitoring app"""
+    try:
+        data = request.get_json()
+        global printer_state
+        
+        if data:
+            # Update print status fields if provided
+            if "print_status" in data:
+                printer_state["print_status"] = data["print_status"]
+            if "print_progress" in data:
+                printer_state["print_progress"] = data["print_progress"]
+            if "print_time_elapsed" in data:
+                printer_state["print_time_elapsed"] = data["print_time_elapsed"]
+            if "print_time_remaining" in data:
+                printer_state["print_time_remaining"] = data["print_time_remaining"]
+            
+            printer_state["timestamp"] = datetime.now().isoformat()
+            
+            return jsonify({
+                "success": True,
+                "message": "Print status updated",
+                "data": printer_state,
+                "timestamp": datetime.now().isoformat()
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "error": "No data provided"
             }), 400
     except Exception as e:
         return jsonify({
