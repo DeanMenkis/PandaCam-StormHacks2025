@@ -500,7 +500,7 @@ function App() {
                   {getPrintStatusText(printerStatus?.print_status)}
                 </span>
                 {/* AI Binary Status Indicator */}
-                {aiStatus?.ai_monitoring_active && aiStatus?.ai_binary_status !== undefined && (
+                {aiStatus?.ai_binary_status !== undefined && aiStatus?.ai_response && aiStatus.ai_response !== "No analysis yet." && (
                   <div className="ai-binary-indicator">
                     <span className="ai-binary-label">AI Assessment:</span>
                     <span className={`ai-binary-value ${aiStatus.ai_binary_status === 1 ? 'good' : 'bad'}`}>
