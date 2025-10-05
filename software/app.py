@@ -6,21 +6,23 @@ import subprocess
 import threading
 import time
 import base64
-from datetime import datetime
+from datetime import datetime, timedelta
 import numpy as np
 import cv2
 import requests
 import re
+import shutil
 
 from prompt import PROMPT
+from alert_system import alert_system
 
 try:
     from picamera import PiCamera
     PICAMERA_AVAILABLE = True
     print("✅ Legacy PiCamera library available")
-except (ImportError, OSError) as e:
+except (ImportError, OSError):
     PICAMERA_AVAILABLE = False
-    print(f"❌ Legacy PiCamera library not available: {e}")
+    # Don't print error - PiCamera2 is preferred anyway
 
 try:
     # Try to import from system packages first
@@ -55,6 +57,10 @@ printer_state = {
     "ai_confidence": 0.0,  # AI confidence level (0.5-1.0)
     "ai_binary_status": 0,  # Binary classification: 1 = good, 0 = bad
     "last_ai_analysis": None,  # Timestamp of last AI analysis
+    "ai_countdown": 0,  # Countdown to next AI analysis (seconds)
+    "ai_process_status": "idle",  # Current AI process status: idle, capturing, analyzing, processing
+    "ai_analysis_count": 0,  # Total number of analyses performed
+    "ai_success_rate": 0.0,  # Success rate of AI analyses (0.0-1.0)
     "timestamp": datetime.now().isoformat()
 }
 
@@ -66,15 +72,186 @@ frame_lock = threading.Lock()
 # AI Monitoring configuration and state
 GEMINI_API_KEY = "AIzaSyBHIiKiXJNKW6Ot5ZuFT1S2CiajIyvRP_c"
 GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
-AI_MONITORING_INTERVAL = 10  # seconds
+AI_MONITORING_INTERVAL = 15  # seconds - default interval (0.067 Hz)
+AI_MAX_RETRIES = 2  # Maximum retries for failed API calls
+AI_RETRY_DELAY = 5  # seconds between retries
 
 # AI monitoring thread control
 ai_monitoring_thread = None
 ai_monitoring_active = False
+ai_monitoring_paused = False
 ai_monitoring_lock = threading.Lock()
+
+# AI monitoring statistics
+ai_stats = {
+    "total_analyses": 0,
+    "successful_analyses": 0,
+    "failed_analyses": 0,
+    "last_analysis_time": None,
+    "next_analysis_time": None
+}
 
 # Global state lock for thread safety
 printer_state_lock = threading.Lock()
+
+# History storage configuration
+HISTORY_DIR = "ai_history"
+HISTORY_IMAGES_DIR = os.path.join(HISTORY_DIR, "images")
+HISTORY_MAX_ENTRIES = 100  # Maximum number of history entries to keep
+
+# Create history directories if they don't exist
+def ensure_history_directories():
+    """Create history storage directories if they don't exist"""
+    try:
+        os.makedirs(HISTORY_IMAGES_DIR, exist_ok=True)
+        print(f"✅ History directories created: {HISTORY_DIR}")
+    except Exception as e:
+        print(f"❌ Failed to create history directories: {e}")
+
+# Initialize history directories
+ensure_history_directories()
+
+class HistoryManager:
+    """Manages AI analysis history storage and retrieval"""
+    
+    def __init__(self, history_dir, images_dir, max_entries=100):
+        self.history_dir = history_dir
+        self.images_dir = images_dir
+        self.max_entries = max_entries
+        self.history_file = os.path.join(history_dir, "history.json")
+        self.history_lock = threading.Lock()
+    
+    def save_analysis(self, frame_data, gemini_response, analysis_result):
+        """
+        Save an AI analysis to history
+        
+        Args:
+            frame_data: JPEG image data as bytes
+            gemini_response: Raw response from Gemini
+            analysis_result: Parsed analysis result
+        """
+        try:
+            with self.history_lock:
+                # Generate unique filename with timestamp
+                timestamp = datetime.now()
+                filename_base = timestamp.strftime("%Y%m%d_%H%M%S_%f")[:-3]  # Remove last 3 digits of microseconds
+                image_filename = f"{filename_base}.jpg"
+                image_path = os.path.join(self.images_dir, image_filename)
+                
+                # Save image
+                with open(image_path, 'wb') as f:
+                    f.write(frame_data)
+                
+                # Create history entry
+                history_entry = {
+                    "id": filename_base,
+                    "timestamp": timestamp.isoformat(),
+                    "image_filename": image_filename,
+                    "image_path": image_path,
+                    "gemini_response": gemini_response,
+                    "analysis_result": analysis_result,
+                    "image_size": len(frame_data),
+                    "success": analysis_result.get('success', False),
+                    "print_status": analysis_result.get('print_status', 'unknown'),
+                    "confidence": analysis_result.get('confidence', 0.0),
+                    "binary_status": analysis_result.get('binary_status', 0)
+                }
+                
+                # Load existing history
+                history = self._load_history()
+                
+                # Add new entry
+                history.append(history_entry)
+                
+                # Keep only the most recent entries
+                if len(history) > self.max_entries:
+                    # Remove oldest entries and their images
+                    entries_to_remove = history[:-self.max_entries]
+                    for entry in entries_to_remove:
+                        try:
+                            if os.path.exists(entry['image_path']):
+                                os.remove(entry['image_path'])
+                        except Exception as e:
+                            print(f"⚠️ Failed to remove old image {entry['image_path']}: {e}")
+                    history = history[-self.max_entries:]
+                
+                # Save updated history
+                self._save_history(history)
+                
+                print(f"📸 History entry saved: {filename_base}")
+                return history_entry
+                
+        except Exception as e:
+            print(f"❌ Failed to save history entry: {e}")
+            return None
+    
+    def _load_history(self):
+        """Load history from JSON file"""
+        try:
+            if os.path.exists(self.history_file):
+                with open(self.history_file, 'r') as f:
+                    return json.load(f)
+            return []
+        except Exception as e:
+            print(f"❌ Failed to load history: {e}")
+            return []
+    
+    def _save_history(self, history):
+        """Save history to JSON file"""
+        try:
+            with open(self.history_file, 'w') as f:
+                json.dump(history, f, indent=2)
+        except Exception as e:
+            print(f"❌ Failed to save history: {e}")
+    
+    def get_history(self, limit=None):
+        """Get history entries, optionally limited to recent entries"""
+        try:
+            with self.history_lock:
+                history = self._load_history()
+                if limit:
+                    return history[-limit:]
+                return history
+        except Exception as e:
+            print(f"❌ Failed to get history: {e}")
+            return []
+    
+    def get_history_entry(self, entry_id):
+        """Get a specific history entry by ID"""
+        try:
+            with self.history_lock:
+                history = self._load_history()
+                for entry in history:
+                    if entry['id'] == entry_id:
+                        return entry
+                return None
+        except Exception as e:
+            print(f"❌ Failed to get history entry: {e}")
+            return None
+    
+    def clear_history(self):
+        """Clear all history entries and images"""
+        try:
+            with self.history_lock:
+                # Remove all images
+                history = self._load_history()
+                for entry in history:
+                    try:
+                        if os.path.exists(entry['image_path']):
+                            os.remove(entry['image_path'])
+                    except Exception as e:
+                        print(f"⚠️ Failed to remove image {entry['image_path']}: {e}")
+                
+                # Clear history file
+                self._save_history([])
+                print("🗑️ History cleared")
+                return True
+        except Exception as e:
+            print(f"❌ Failed to clear history: {e}")
+            return False
+
+# Initialize history manager
+history_manager = HistoryManager(HISTORY_DIR, HISTORY_IMAGES_DIR, HISTORY_MAX_ENTRIES)
 
 class CameraManager:
     def __init__(self):
@@ -161,32 +338,28 @@ class CameraManager:
             print("📹 Trying PiCamera2...")
             self.camera = Picamera2()
             
-            # Create a more compatible configuration with better white balance
-            # Back to RGB888 format - we'll handle conversion properly
+            # Use proper auto white balance with PiCamera2
+            print("🎨 Using auto white balance (PiCamera2 AWB)")
             config = self.camera.create_video_configuration(
                 main={"size": (640, 480), "format": "RGB888"},
                 controls={
                     "FrameRate": 15,
-                    "AwbEnable": True,  # Enable auto white balance
-                    "AwbMode": 1,  # Auto white balance mode
-                    "Brightness": 0.0,  # Neutral brightness
-                    "Contrast": 1.0,  # Normal contrast
-                    "Saturation": 1.0,  # Normal saturation
+                    "AwbMode": 0,  # Auto white balance (0 = auto, 1 = manual)
                     "ExposureTime": 0,  # Auto exposure
                     "AnalogueGain": 0,  # Auto gain
                 }
             )
+            
             self.camera.configure(config)
             self.camera.start()
             
             # Set additional controls after starting
             try:
-                # Force auto white balance for natural colors
+                # Apply proper auto white balance
                 self.camera.set_controls({
-                    "AwbEnable": True,
-                    "AwbMode": 1,  # Auto white balance mode
+                    "AwbMode": 0,  # Enable auto white balance (0 = auto)
                 })
-                print("🎨 Auto white balance controls applied")
+                print("🎨 Auto white balance enabled (PiCamera2 AWB)")
             except Exception as wb_error:
                 print(f"⚠️ White balance control warning: {wb_error}")
                 # Continue anyway, basic functionality should still work
@@ -309,7 +482,10 @@ class CameraManager:
             # PiCamera2 already returns BGR on most systems - don't force conversion
             frame_bgr = frame
             
-            _, buffer = cv2.imencode('.jpg', frame_bgr, [cv2.IMWRITE_JPEG_QUALITY, 95])
+            # Resize frame to 720p 16:9 aspect ratio for AI analysis
+            resized_frame = cv2.resize(frame_bgr, (1280, 720))  # 720p 16:9 aspect ratio
+            
+            _, buffer = cv2.imencode('.jpg', resized_frame, [cv2.IMWRITE_JPEG_QUALITY, 90])  # High quality for AI
             return buffer.tobytes()
             
         except Exception as e:
@@ -323,12 +499,17 @@ class CameraManager:
             if ret and frame is not None:
                 if frame.shape[:2] != (480, 640):
                     frame = cv2.resize(frame, (640, 480))
-                _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+                
+                # Resize frame to 720p 16:9 aspect ratio for AI analysis
+                resized_frame = cv2.resize(frame, (1280, 720))  # 720p 16:9 aspect ratio
+                
+                _, buffer = cv2.imencode('.jpg', resized_frame, [cv2.IMWRITE_JPEG_QUALITY, 90])  # High quality for AI
                 return buffer.tobytes()
             return None
         except Exception as e:
             print(f"OpenCV capture error: {e}")
             return None
+    
     
     def stop_camera(self):
         """Stop and cleanup the camera"""
@@ -362,12 +543,13 @@ class GeminiAIAnalyzer:
         self.api_url = api_url
         self.prompt = PROMPT
     
-    def analyze_frame(self, frame_data):
+    def analyze_frame(self, frame_data, retry_count=0):
         """
-        Analyze a frame using Gemini Vision API
+        Analyze a frame using Gemini Vision API with retry logic
         
         Args:
             frame_data: JPEG image data as bytes
+            retry_count: Current retry attempt (internal use)
             
         Returns:
             dict: {
@@ -426,7 +608,7 @@ class GeminiAIAnalyzer:
                 f"{self.api_url}?key={self.api_key}",
                 headers=headers,
                 json=payload,
-                timeout=30
+                timeout=15  # Reduced from 30 to 15 seconds
             )
             
             print(f"📡 Gemini API response status: {response.status_code}")
@@ -479,16 +661,30 @@ class GeminiAIAnalyzer:
         except requests.exceptions.Timeout:
             error_msg = 'Gemini API request timeout'
             print(f"⏰ {error_msg}")
+            
+            # Retry logic for timeout
+            if retry_count < AI_MAX_RETRIES:
+                print(f"🔄 Retrying Gemini API call (attempt {retry_count + 1}/{AI_MAX_RETRIES})")
+                time.sleep(AI_RETRY_DELAY)
+                return self.analyze_frame(frame_data, retry_count + 1)
+            
             return {
                 'success': False,
                 'response_text': None,
                 'print_status': 'idle',
                 'confidence': 0.5,
-                'error': error_msg
+                'error': f'{error_msg} (after {AI_MAX_RETRIES} retries)'
             }
         except requests.exceptions.RequestException as e:
             error_msg = f'Gemini API request failed: {str(e)}'
             print(f"🌐 {error_msg}")
+            
+            # Retry logic for network errors
+            if retry_count < AI_MAX_RETRIES and ('timeout' in str(e).lower() or 'connection' in str(e).lower()):
+                print(f"🔄 Retrying Gemini API call (attempt {retry_count + 1}/{AI_MAX_RETRIES})")
+                time.sleep(AI_RETRY_DELAY)
+                return self.analyze_frame(frame_data, retry_count + 1)
+            
             return {
                 'success': False,
                 'response_text': None,
@@ -632,33 +828,111 @@ ai_analyzer = GeminiAIAnalyzer(GEMINI_API_KEY, GEMINI_API_URL)
 
 def ai_monitoring_worker():
     """
-    AI monitoring worker thread that captures frames every 10 seconds
+    AI monitoring worker thread that captures frames at configurable intervals
     and analyzes them using Gemini Vision API
     """
-    global ai_monitoring_active, printer_state, camera_manager, ai_analyzer
+    global ai_monitoring_active, ai_monitoring_paused, printer_state, camera_manager, ai_analyzer, ai_stats
     
     print("🤖 AI monitoring thread started")
     
+    # Initialize next analysis time
+    ai_stats["next_analysis_time"] = datetime.now()
+    
     while ai_monitoring_active:
         try:
+            # Update countdown and process status
+            current_time = datetime.now()
+            if ai_stats["next_analysis_time"]:
+                time_until_next = (ai_stats["next_analysis_time"] - current_time).total_seconds()
+                countdown = max(0, int(time_until_next))
+            else:
+                countdown = 0
+            
+            # Update printer state with countdown and process status
+            with ai_monitoring_lock:
+                printer_state["ai_countdown"] = countdown
+                if ai_monitoring_paused:
+                    printer_state["ai_process_status"] = "paused"
+                else:
+                    printer_state["ai_process_status"] = "waiting"
+                printer_state["ai_analysis_count"] = ai_stats["total_analyses"]
+                if ai_stats["total_analyses"] > 0:
+                    printer_state["ai_success_rate"] = ai_stats["successful_analyses"] / ai_stats["total_analyses"]
+                else:
+                    printer_state["ai_success_rate"] = 0.0
+                printer_state["timestamp"] = current_time.isoformat()
+            
+            # If paused, just wait and continue
+            if ai_monitoring_paused:
+                time.sleep(1)
+                continue
+            
+            # Wait until it's time for the next analysis
+            if countdown > 0:
+                time.sleep(1)  # Update countdown every second
+                continue
+            # Update process status to capturing
+            with ai_monitoring_lock:
+                printer_state["ai_process_status"] = "capturing"
+                printer_state["timestamp"] = current_time.isoformat()
+            
             # Ensure camera is initialized
             if not camera_manager.is_initialized:
                 print("📹 AI monitoring: Initializing camera...")
+                with ai_monitoring_lock:
+                    printer_state["ai_process_status"] = "initializing_camera"
+                    printer_state["timestamp"] = current_time.isoformat()
+                
                 if not camera_manager.initialize_camera():
-                    print("❌ AI monitoring: Failed to initialize camera, retrying in 10 seconds")
-                    time.sleep(AI_MONITORING_INTERVAL)
+                    print("❌ AI monitoring: Failed to initialize camera, skipping analysis")
+                    with ai_monitoring_lock:
+                        printer_state["ai_process_status"] = "camera_unavailable"
+                        printer_state["timestamp"] = current_time.isoformat()
+                    ai_stats["next_analysis_time"] = datetime.now() + timedelta(seconds=AI_MONITORING_INTERVAL)
+                    time.sleep(1)
                     continue
+            
+            # Double-check camera is still initialized before capturing
+            if not camera_manager.is_initialized:
+                print("❌ AI monitoring: Camera not available, skipping analysis")
+                with ai_monitoring_lock:
+                    printer_state["ai_process_status"] = "camera_unavailable"
+                    printer_state["timestamp"] = current_time.isoformat()
+                ai_stats["next_analysis_time"] = datetime.now() + timedelta(seconds=AI_MONITORING_INTERVAL)
+                time.sleep(1)
+                continue
             
             # Capture frame
             print(f"📸 AI monitoring: Attempting to capture frame at {datetime.now().strftime('%H:%M:%S')}")
             frame_data = camera_manager.capture_frame()
             
-            if frame_data:
+            if frame_data and len(frame_data) > 1000:  # Ensure frame has meaningful data
                 print(f"✅ Frame captured successfully, size: {len(frame_data)} bytes")
                 print(f"🤖 AI monitoring: Analyzing frame at {datetime.now().strftime('%H:%M:%S')}")
                 
+                # Update process status to analyzing
+                with ai_monitoring_lock:
+                    printer_state["ai_process_status"] = "analyzing"
+                    printer_state["timestamp"] = current_time.isoformat()
+                
                 # Analyze frame with Gemini
                 analysis_result = ai_analyzer.analyze_frame(frame_data)
+                
+                # Save to history
+                if analysis_result['success']:
+                    history_manager.save_analysis(
+                        frame_data, 
+                        analysis_result['response_text'], 
+                        analysis_result
+                    )
+                
+                # Update statistics
+                ai_stats["total_analyses"] += 1
+                if analysis_result['success']:
+                    ai_stats["successful_analyses"] += 1
+                else:
+                    ai_stats["failed_analyses"] += 1
+                ai_stats["last_analysis_time"] = current_time
                 
                 # Update printer state with thread safety
                 with ai_monitoring_lock:
@@ -695,6 +969,14 @@ def ai_monitoring_worker():
                         # Alert for failures
                         if analysis_result['binary_status'] == 0:
                             print(f"🚨 AI DETECTED ISSUE: Binary classification = 0 (not going well)")
+                            # Send Discord alert with image and full details
+                            alert_system.send_print_failure_alert(
+                                analysis_result['print_status'],
+                                analysis_result['confidence'],
+                                analysis_result['response_text'],
+                                frame_data,  # Include the captured image
+                                ai_analyzer.prompt  # Include the Gemini prompt
+                            )
                         
                     else:
                         # Handle analysis error
@@ -703,26 +985,48 @@ def ai_monitoring_worker():
                         printer_state["last_ai_analysis"] = datetime.now().isoformat()
                         print(f"❌ AI analysis error: {analysis_result['error']}")
                     
+                    # Update process status to processing and set next analysis time
+                    printer_state["ai_process_status"] = "processing"
+                    printer_state["ai_analysis_count"] = ai_stats["total_analyses"]
+                    if ai_stats["total_analyses"] > 0:
+                        printer_state["ai_success_rate"] = ai_stats["successful_analyses"] / ai_stats["total_analyses"]
                     printer_state["timestamp"] = datetime.now().isoformat()
+                    
+                    # Schedule next analysis
+                    ai_stats["next_analysis_time"] = datetime.now() + timedelta(seconds=AI_MONITORING_INTERVAL)
+                    
+                    # Reset process status to waiting for next cycle
+                    printer_state["ai_process_status"] = "waiting"
             else:
                 print("⚠️ AI monitoring: Failed to capture frame")
                 with ai_monitoring_lock:
                     printer_state["ai_response"] = "Failed to capture camera frame"
                     printer_state["ai_confidence"] = 0.5
+                    printer_state["ai_process_status"] = "capture_failed"
                     printer_state["last_ai_analysis"] = datetime.now().isoformat()
                     printer_state["timestamp"] = datetime.now().isoformat()
+                
+                # Schedule next analysis
+                ai_stats["next_analysis_time"] = datetime.now() + timedelta(seconds=AI_MONITORING_INTERVAL)
+                
+                # Reset process status to waiting for next cycle
+                printer_state["ai_process_status"] = "waiting"
             
-            # Wait for next analysis cycle
-            time.sleep(AI_MONITORING_INTERVAL)
+            # Wait for next analysis cycle (will be handled by countdown logic)
+            time.sleep(1)
             
         except Exception as e:
             print(f"❌ AI monitoring thread error: {e}")
             with ai_monitoring_lock:
                 printer_state["ai_response"] = f"Monitoring error: {str(e)}"
                 printer_state["ai_confidence"] = 0.5
+                printer_state["ai_process_status"] = "error"
                 printer_state["last_ai_analysis"] = datetime.now().isoformat()
                 printer_state["timestamp"] = datetime.now().isoformat()
-            time.sleep(AI_MONITORING_INTERVAL)
+            
+            # Schedule next analysis with longer delay on error
+            ai_stats["next_analysis_time"] = datetime.now() + timedelta(seconds=AI_MONITORING_INTERVAL * 2)
+            time.sleep(1)
     
     print("🤖 AI monitoring thread stopped")
 
@@ -1042,6 +1346,7 @@ def get_ai_status():
         with ai_monitoring_lock:
             ai_status = {
                 "ai_monitoring_active": printer_state["ai_monitoring_active"],
+                "ai_monitoring_paused": ai_monitoring_paused,
                 "ai_response": printer_state["ai_response"],
                 "ai_confidence": printer_state["ai_confidence"],
                 "ai_binary_status": printer_state["ai_binary_status"],
@@ -1049,7 +1354,13 @@ def get_ai_status():
                 "last_ai_analysis": printer_state["last_ai_analysis"],
                 "failure_detected": printer_state["failure_detected"],
                 "last_failure_time": printer_state["last_failure_time"],
-                "monitoring_interval": AI_MONITORING_INTERVAL
+                "monitoring_interval": AI_MONITORING_INTERVAL,
+                "monitoring_frequency_hz": 1.0 / AI_MONITORING_INTERVAL,
+                "ai_countdown": printer_state["ai_countdown"],
+                "ai_process_status": printer_state["ai_process_status"],
+                "ai_analysis_count": printer_state["ai_analysis_count"],
+                "ai_success_rate": printer_state["ai_success_rate"],
+                "next_analysis_time": ai_stats["next_analysis_time"].isoformat() if ai_stats["next_analysis_time"] else None
             }
         
         return jsonify({
@@ -1064,6 +1375,207 @@ def get_ai_status():
             "error": str(e),
             "timestamp": datetime.now().isoformat()
         }), 500
+
+@app.route('/api/history', methods=['GET'])
+def get_history():
+    """Get AI analysis history"""
+    try:
+        limit = request.args.get('limit', type=int)
+        history = history_manager.get_history(limit)
+        
+        return jsonify({
+            "success": True,
+            "data": {
+                "entries": history,
+                "total_count": len(history)
+            },
+            "timestamp": datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }), 500
+
+@app.route('/api/history/<entry_id>', methods=['GET'])
+def get_history_entry(entry_id):
+    """Get a specific history entry"""
+    try:
+        entry = history_manager.get_history_entry(entry_id)
+        if entry:
+            return jsonify({
+                "success": True,
+                "data": entry,
+                "timestamp": datetime.now().isoformat()
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "error": "History entry not found",
+                "timestamp": datetime.now().isoformat()
+            }), 404
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }), 500
+
+@app.route('/api/history/image/<entry_id>')
+def get_history_image(entry_id):
+    """Get history image by entry ID"""
+    try:
+        entry = history_manager.get_history_entry(entry_id)
+        if entry and os.path.exists(entry['image_path']):
+            with open(entry['image_path'], 'rb') as f:
+                image_data = f.read()
+            return Response(
+                image_data,
+                mimetype='image/jpeg',
+                headers={'Content-Disposition': f'inline; filename={entry["image_filename"]}'}
+            )
+        else:
+            return jsonify({
+                "success": False,
+                "error": "Image not found"
+            }), 404
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+@app.route('/api/history/clear', methods=['POST'])
+def clear_history():
+    """Clear all history entries"""
+    try:
+        success = history_manager.clear_history()
+        if success:
+            return jsonify({
+                "success": True,
+                "message": "History cleared successfully",
+                "timestamp": datetime.now().isoformat()
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "error": "Failed to clear history",
+                "timestamp": datetime.now().isoformat()
+            }), 500
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }), 500
+
+@app.route('/api/ai/interval', methods=['POST'])
+def set_ai_interval():
+    """Set AI monitoring interval in seconds"""
+    try:
+        data = request.get_json()
+        if not data or 'interval' not in data:
+            return jsonify({
+                "success": False,
+                "error": "Interval value required"
+            }), 400
+        
+        interval_seconds = float(data['interval'])
+        if interval_seconds < 5 or interval_seconds > 60:
+            return jsonify({
+                "success": False,
+                "error": "Interval must be between 5 and 60 seconds"
+            }), 400
+        
+        global AI_MONITORING_INTERVAL
+        AI_MONITORING_INTERVAL = interval_seconds
+        
+        return jsonify({
+            "success": True,
+            "message": f"AI monitoring interval set to {interval_seconds} seconds",
+            "data": {
+                "interval_seconds": interval_seconds,
+                "frequency_hz": 1.0 / interval_seconds
+            },
+            "timestamp": datetime.now().isoformat()
+        })
+    except ValueError:
+        return jsonify({
+            "success": False,
+            "error": "Invalid interval value"
+        }), 400
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }), 500
+
+@app.route('/api/ai/pause', methods=['POST'])
+def pause_ai_monitoring():
+    """Pause AI monitoring"""
+    try:
+        global ai_monitoring_paused
+        
+        with ai_monitoring_lock:
+            ai_monitoring_paused = True
+            printer_state["ai_process_status"] = "paused"
+            printer_state["timestamp"] = datetime.now().isoformat()
+        
+        return jsonify({
+            "success": True,
+            "message": "AI monitoring paused",
+            "timestamp": datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }), 500
+
+@app.route('/api/ai/resume', methods=['POST'])
+def resume_ai_monitoring():
+    """Resume AI monitoring"""
+    try:
+        global ai_monitoring_paused
+        
+        with ai_monitoring_lock:
+            ai_monitoring_paused = False
+            printer_state["ai_process_status"] = "waiting"
+            printer_state["timestamp"] = datetime.now().isoformat()
+        
+        return jsonify({
+            "success": True,
+            "message": "AI monitoring resumed",
+            "timestamp": datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }), 500
+
+@app.route('/api/ai/prompt', methods=['GET'])
+def get_ai_prompt():
+    """Get the current AI analysis prompt"""
+    try:
+        return jsonify({
+            "success": True,
+            "data": {
+                "prompt": PROMPT
+            },
+            "timestamp": datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }), 500
+
 
 
 def create_placeholder_frame(message="Camera Not Active", submessage="Initializing camera..."):
@@ -1270,15 +1782,32 @@ def video_feed():
     
     return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
+# Add a function to print PandaCam message after startup
+def print_pandacam_ready():
+    import threading
+    import time
+    
+    def delayed_message():
+        time.sleep(2)  # Wait for debugger to be active
+        print("🐼 PandaCam initialization finished")
+    
+    threading.Thread(target=delayed_message, daemon=True).start()
+
 if __name__ == '__main__':
-    print("🚀 Starting 3D Printer Monitoring System with AI-Powered Failure Detection")
-    print("📹 Camera will auto-initialize on first video feed request")
-    print("🤖 AI monitoring powered by Google Gemini Vision API")
-    print("🌐 Server will be available at http://0.0.0.0:8000")
-    print("📺 Video feed available at http://0.0.0.0:8000/video_feed")
-    print("🔧 Camera controls: /api/camera/start, /api/camera/stop, /api/camera/status")
-    print("🧠 AI controls: /api/ai/start, /api/ai/stop, /api/ai/status")
-    print("⚡ AI analyzes frames every 10 seconds for print failure detection")
+    # Only print startup info if we're not in a reloaded process
+    import os
+    if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
+        print("🚀 Starting 3D Printer Monitoring System with AI-Powered Failure Detection")
+        print("📹 Camera will auto-initialize on first video feed request")
+        print("🤖 AI monitoring powered by Google Gemini Vision API")
+        print("🌐 Server will be available at http://0.0.0.0:8000")
+        print("📺 Video feed available at http://0.0.0.0:8000/video_feed")
+        print("🔧 Camera controls: /api/camera/start, /api/camera/stop, /api/camera/status")
+        print("🧠 AI controls: /api/ai/start, /api/ai/stop, /api/ai/status")
+        print("⚡ AI analyzes frames every 15 seconds for print failure detection (0.067 Hz)")
+        
+        # Schedule PandaCam message after debugger is active
+        print_pandacam_ready()
     
     # Run on all interfaces so it can be accessed from other devices
     app.run(host='0.0.0.0', port=8000, debug=True)

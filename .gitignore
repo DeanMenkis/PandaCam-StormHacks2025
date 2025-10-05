@@ -3,6 +3,12 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# AI History directory
+ai_history/
+
+# Configuration file with sensitive information
+software/config.py
+
 # C extensions
 *.so
 

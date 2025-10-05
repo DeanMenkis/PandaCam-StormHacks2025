@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
+import History from './History';
+import ErrorBoundary from './ErrorBoundary';
 
 function App() {
   const [printerStatus, setPrinterStatus] = useState(null);
@@ -9,11 +11,113 @@ function App() {
   const [lastUpdated, setLastUpdated] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [aiStatus, setAiStatus] = useState(null);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [countdown, setCountdown] = useState(0);
+  const [interval, setInterval] = useState(15); // Default 15 seconds
+
+  // Use countdown from backend (already calculated and synced)
+  const getCountdown = (aiStatus) => {
+    if (!aiStatus || !aiStatus.ai_monitoring_active) {
+      return 0;
+    }
+    return aiStatus.ai_countdown || 0;
+  };
+
+  // Smooth countdown timer
+  useEffect(() => {
+    if (!aiStatus || !aiStatus.ai_monitoring_active) {
+      setCountdown(0);
+      return;
+    }
+
+    // Always use the backend countdown value directly
+    const backendCountdown = getCountdown(aiStatus);
+    setCountdown(backendCountdown);
+
+    // Run smooth countdown that syncs with backend
+    const countdownInterval = setInterval(() => {
+      setCountdown(prev => {
+        // Get fresh countdown from backend
+        const freshCountdown = getCountdown(aiStatus);
+        
+        // If backend countdown is different, use it
+        if (freshCountdown !== prev) {
+          return freshCountdown;
+        }
+        
+        // Otherwise, count down normally
+        return Math.max(0, prev - 1);
+      });
+    }, 1000);
+
+    return () => clearInterval(countdownInterval);
+  }, [aiStatus?.ai_monitoring_active, aiStatus?.ai_countdown, aiStatus]);
+
+  const setAiInterval = async (intervalSeconds) => {
+    try {
+      setActionLoading(true);
+      const response = await axios.post('/api/ai/interval', { interval: intervalSeconds }, { timeout: 10000 });
+      if (response.data.success) {
+        setInterval(intervalSeconds);
+        setError(null);
+        // Refresh AI status to get updated interval
+        fetchAiStatus();
+      } else {
+        setError('Failed to set interval: ' + (response.data.error || 'Unknown error'));
+      }
+    } catch (err) {
+      setError('Error setting interval: ' + err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+
+  const pauseAiMonitoring = async () => {
+    try {
+      setActionLoading(true);
+      const response = await axios.post('/api/ai/pause', {}, { timeout: 10000 });
+      if (response.data.success) {
+        setError(null);
+      } else {
+        setError('Failed to pause AI monitoring: ' + (response.data.error || 'Unknown error'));
+      }
+    } catch (err) {
+      setError('Error pausing AI monitoring: ' + err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const resumeAiMonitoring = async () => {
+    try {
+      setActionLoading(true);
+      const response = await axios.post('/api/ai/resume', {}, { timeout: 10000 });
+      if (response.data.success) {
+        setError(null);
+      } else {
+        setError('Failed to resume AI monitoring: ' + (response.data.error || 'Unknown error'));
+      }
+    } catch (err) {
+      setError('Error resuming AI monitoring: ' + err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const fetchPrinterStatus = async (retryCount = 0) => {
+    // Prevent multiple simultaneous retries
+    if (isRetrying && retryCount > 0) {
+      return;
+    }
+    
     try {
       setLoading(true);
-      const response = await axios.get('/api/printer/status', { timeout: 10000 });
+      if (retryCount > 0) {
+        setIsRetrying(true);
+      }
+      const response = await axios.get('/api/printer/status', { timeout: 25000 }); // Increased to 25s
       if (response.data.success) {
         const newStatus = response.data.data;
         
@@ -37,6 +141,7 @@ function App() {
         setPrinterStatus(newStatus);
         setLastUpdated(new Date().toLocaleTimeString());
         setError(null);
+        setIsRetrying(false); // Reset retry state on success
       } else {
         setError('Failed to fetch printer status');
       }
@@ -46,16 +151,18 @@ function App() {
       // Retry logic for network issues and timeouts
       if (retryCount < 2 && (err.code === 'ECONNABORTED' || err.code === 'NETWORK_ERROR' || err.message.includes('timeout'))) {
         console.log(`🔄 Retrying printer status fetch (attempt ${retryCount + 1}) - ${err.message}`);
-        setTimeout(() => fetchPrinterStatus(retryCount + 1), 2000);
+        setError(`Backend is slow to respond - retrying... (attempt ${retryCount + 1}/2)`);
+        setTimeout(() => fetchPrinterStatus(retryCount + 1), 3000);
         return;
       }
       
-      // More user-friendly error messages
+      // More user-friendly error messages for final failure
       if (err.message.includes('timeout')) {
-        setError('Backend is slow to respond - retrying...');
+        setError('Backend connection timeout - please check if the server is running');
       } else {
         setError('Error connecting to backend: ' + err.message);
       }
+      setIsRetrying(false); // Reset retry state on final failure
     } finally {
       setLoading(false);
     }
@@ -63,7 +170,7 @@ function App() {
 
   const fetchAiStatus = async (retryCount = 0) => {
     try {
-      const response = await axios.get('/api/ai/status', { timeout: 10000 });
+      const response = await axios.get('/api/ai/status', { timeout: 25000 }); // Increased to 25s
       if (response.data.success) {
         const newAiStatus = response.data.data;
         
@@ -79,6 +186,11 @@ function App() {
         }
         
         setAiStatus(newAiStatus);
+        
+        // Sync frontend interval state with backend
+        if (newAiStatus.monitoring_interval && newAiStatus.monitoring_interval !== interval) {
+          setInterval(newAiStatus.monitoring_interval);
+        }
       }
     } catch (err) {
       console.error('Error fetching AI status:', err);
@@ -86,24 +198,32 @@ function App() {
       // Retry logic for network issues and timeouts
       if (retryCount < 2 && (err.code === 'ECONNABORTED' || err.code === 'NETWORK_ERROR' || err.message.includes('timeout'))) {
         console.log(`🔄 Retrying AI status fetch (attempt ${retryCount + 1}) - ${err.message}`);
-        setTimeout(() => fetchAiStatus(retryCount + 1), 2000);
+        setTimeout(() => fetchAiStatus(retryCount + 1), 3000);
         return;
       }
+      
+      // Log final AI fetch failure (but don't show error to user since AI is optional)
+      console.warn('AI status fetch failed after retries:', err.message);
     }
   };
+
 
   const startAiMonitoring = async () => {
     try {
       setActionLoading(true);
-      const response = await axios.post('/api/ai/start');
+      const response = await axios.post('/api/ai/start', {}, { timeout: 30000 }); // 30s timeout for AI start
       if (response.data.success) {
         setAiStatus(response.data.data);
         setError(null);
       } else {
-        setError('Failed to start AI monitoring');
+        setError('Failed to start AI monitoring: ' + (response.data.error || 'Unknown error'));
       }
     } catch (err) {
-      setError('Error starting AI monitoring: ' + err.message);
+      if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
+        setError('AI monitoring start timed out - the system may be busy. Please try again.');
+      } else {
+        setError('Error starting AI monitoring: ' + err.message);
+      }
     } finally {
       setActionLoading(false);
     }
@@ -112,15 +232,19 @@ function App() {
   const stopAiMonitoring = async () => {
     try {
       setActionLoading(true);
-      const response = await axios.post('/api/ai/stop');
+      const response = await axios.post('/api/ai/stop', {}, { timeout: 15000 }); // 15s timeout for AI stop
       if (response.data.success) {
         setAiStatus(response.data.data);
         setError(null);
       } else {
-        setError('Failed to stop AI monitoring');
+        setError('Failed to stop AI monitoring: ' + (response.data.error || 'Unknown error'));
       }
     } catch (err) {
-      setError('Error stopping AI monitoring: ' + err.message);
+      if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
+        setError('AI monitoring stop timed out - the system may be busy. Please try again.');
+      } else {
+        setError('Error stopping AI monitoring: ' + err.message);
+      }
     } finally {
       setActionLoading(false);
     }
@@ -163,11 +287,13 @@ function App() {
   useEffect(() => {
     fetchPrinterStatus();
     fetchAiStatus();
-    // Auto-refresh every 3 seconds to balance responsiveness and performance
+    // Auto-refresh every 8 seconds to prevent backend overload
     const interval = setInterval(() => {
-      fetchPrinterStatus();
-      fetchAiStatus();
-    }, 3000);
+      if (!isRetrying) { // Only poll if not currently retrying
+        fetchPrinterStatus();
+        fetchAiStatus();
+      }
+    }, 8000); // Increased from 5s to 8s to reduce load
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -215,8 +341,50 @@ function App() {
     );
   }
 
+  // Show History component if History tab is active
+  if (activeTab === 'history') {
+    return (
+      <div className="app">
+        <div className="tab-navigation">
+          <button 
+            className={`tab-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
+            onClick={() => setActiveTab('dashboard')}
+          >
+            🏠 Dashboard
+          </button>
+          <button 
+            className={`tab-btn ${activeTab === 'history' ? 'active' : ''}`}
+            onClick={() => setActiveTab('history')}
+          >
+            📸 History
+          </button>
+        </div>
+        <ErrorBoundary>
+          <History />
+        </ErrorBoundary>
+      </div>
+    );
+  }
+
   return (
-    <div className="app">
+    <ErrorBoundary>
+      <div className="app">
+        {/* Tab Navigation */}
+        <div className="tab-navigation">
+          <button 
+            className={`tab-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
+            onClick={() => setActiveTab('dashboard')}
+          >
+            🏠 Dashboard
+          </button>
+          <button 
+            className={`tab-btn ${activeTab === 'history' ? 'active' : ''}`}
+            onClick={() => setActiveTab('history')}
+          >
+            📸 History
+          </button>
+        </div>
+
       {/* Animated Snow Background */}
       <div className="snow-container">
         <div className="snowflake"></div>
@@ -376,7 +544,43 @@ function App() {
                 <span className="ai-status-text">
                   {aiStatus?.ai_monitoring_active ? 'Active' : 'Inactive'}
                 </span>
+                {aiStatus?.ai_monitoring_active && (
+                  <div className="ai-countdown">
+                    <span className="countdown-label">
+                      {aiStatus.ai_monitoring_paused ? 'PAUSED' : 
+                       aiStatus.ai_process_status === 'analyzing' ? 'Analyzing now...' :
+                       countdown > 0 ? 'Next analysis in:' : 'Ready...'}
+                    </span>
+                    <span className={`countdown-timer ${aiStatus.ai_monitoring_paused ? 'paused' : aiStatus.ai_process_status === 'analyzing' ? 'analyzing' : ''}`}>
+                      {aiStatus.ai_monitoring_paused ? '⏸️' : 
+                       aiStatus.ai_process_status === 'analyzing' ? '⏳' :
+                       countdown > 0 ? `${countdown}s` : '✓'}
+                    </span>
+                  </div>
+                )}
               </div>
+              
+              {/* AI Process Status */}
+              {aiStatus?.ai_monitoring_active && (
+                <div className="ai-process-status">
+                  <div className="process-status-item">
+                    <span className="process-label">Status:</span>
+                    <span className={`process-value ${aiStatus.ai_process_status || 'idle'}`}>
+                      {(aiStatus.ai_process_status || 'idle').replace('_', ' ').toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="process-status-item">
+                    <span className="process-label">Analyses:</span>
+                    <span className="process-value">{aiStatus.ai_analysis_count || 0}</span>
+                  </div>
+                  <div className="process-status-item">
+                    <span className="process-label">Success Rate:</span>
+                    <span className="process-value">
+                      {Math.round((aiStatus.ai_success_rate || 0) * 100)}%
+                    </span>
+                  </div>
+                </div>
+              )}
               
               <div className="ai-controls">
                 <button 
@@ -393,6 +597,40 @@ function App() {
                 >
                   {actionLoading ? 'Stopping...' : 'Stop AI Monitoring'}
                 </button>
+                {aiStatus?.ai_monitoring_active && (
+                  <>
+                    <button 
+                      className={`control-btn pause-btn ${aiStatus?.ai_monitoring_paused ? 'disabled' : ''}`}
+                      onClick={pauseAiMonitoring}
+                      disabled={aiStatus?.ai_monitoring_paused || actionLoading}
+                    >
+                      {actionLoading ? 'Pausing...' : '⏸️ Pause'}
+                    </button>
+                    <button 
+                      className={`control-btn resume-btn ${!aiStatus?.ai_monitoring_paused ? 'disabled' : ''}`}
+                      onClick={resumeAiMonitoring}
+                      disabled={!aiStatus?.ai_monitoring_paused || actionLoading}
+                    >
+                      {actionLoading ? 'Resuming...' : '▶️ Resume'}
+                    </button>
+                    <div className="interval-dropdown">
+                      <select
+                        value={interval}
+                        onChange={(e) => setAiInterval(parseInt(e.target.value))}
+                        disabled={!aiStatus?.ai_monitoring_paused || actionLoading}
+                        className="interval-select"
+                      >
+                        <option value={5}>5s</option>
+                        <option value={10}>10s</option>
+                        <option value={15}>15s</option>
+                        <option value={25}>25s</option>
+                        <option value={30}>30s</option>
+                        <option value={45}>45s</option>
+                        <option value={60}>60s</option>
+                      </select>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* AI Analysis Results */}
@@ -424,6 +662,16 @@ function App() {
                 </div>
               )}
 
+              {/* AI Response Display */}
+              {aiStatus?.ai_response && (
+                <div className="ai-prompt-card">
+                  <h3>🤖 Gemini AI Response</h3>
+                  <div className="ai-prompt-content">
+                    <pre>{aiStatus.ai_response}</pre>
+                  </div>
+                </div>
+              )}
+
               </div>
             </div>
           </div>
@@ -450,7 +698,10 @@ function App() {
           </div>
         </div>
       </main>
-    </div>
+      </div>
+
+
+    </ErrorBoundary>
   );
 }
 
