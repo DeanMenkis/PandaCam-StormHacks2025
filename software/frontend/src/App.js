@@ -272,6 +272,27 @@ function App() {
               </button>
             </div>
             
+            {/* Picture Selection */}
+            <div className="picture-selection">
+              <input
+                type="file"
+                id="picture-upload"
+                accept="image/*"
+                capture="environment"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  // Placeholder for future functionality
+                  console.log('Picture selected:', e.target.files[0]);
+                }}
+              />
+              <button 
+                className="control-btn picture-btn"
+                onClick={() => document.getElementById('picture-upload').click()}
+              >
+                📷 Choose Picture
+              </button>
+            </div>
+            
             {/* Failure Alert */}
             {printerStatus?.failure_detected && (
               <div className="failure-alert">
