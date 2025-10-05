@@ -7,8 +7,6 @@ import threading
 import time
 import base64
 from datetime import datetime
-import multiprocessing as mp
-from multiprocessing import shared_memory
 import numpy as np
 import cv2
 
@@ -32,14 +30,153 @@ printer_state = {
     "timestamp": datetime.now().isoformat()
 }
 
-# Video streaming process (will be set when streaming starts)
-video_process = None
-
-# Camera frame storage
-current_frame = None
+# Camera management
+camera = None
 camera_active = False
 frame_lock = threading.Lock()
-shared_memory_handle = None
+current_frame = None
+camera_thread = None
+
+def find_available_cameras():
+    """Find all available cameras"""
+    available_cameras = []
+    for i in range(10):  # Check up to 10 camera indices
+        cap = cv2.VideoCapture(i)
+        if cap.isOpened():
+            ret, frame = cap.read()
+            if ret and frame is not None:
+                width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                fps = cap.get(cv2.CAP_PROP_FPS)
+                
+                camera_info = {
+                    'index': i,
+                    'width': width,
+                    'height': height,
+                    'fps': fps,
+                    'frame_shape': frame.shape
+                }
+                available_cameras.append(camera_info)
+                print(f"📹 Camera {i}: {width}x{height} @ {fps}fps")
+            cap.release()
+    
+    return available_cameras
+
+def initialize_camera():
+    """Initialize the camera"""
+    global camera, camera_active
+    
+    try:
+        # Find available cameras
+        available_cameras = find_available_cameras()
+        
+        if not available_cameras:
+            print("❌ No cameras found!")
+            return False
+        
+        # Try to use the first available camera
+        camera_index = available_cameras[0]['index']
+        print(f"🎥 Initializing camera {camera_index}...")
+        
+        camera = cv2.VideoCapture(camera_index)
+        
+        if not camera.isOpened():
+            print(f"❌ Failed to open camera {camera_index}")
+            return False
+        
+        # Set camera properties
+        camera.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        camera.set(cv2.CAP_PROP_FPS, 30)
+        
+        # Test camera
+        ret, test_frame = camera.read()
+        if not ret or test_frame is None:
+            print("❌ Camera opened but can't read frames")
+            camera.release()
+            camera = None
+            return False
+        
+        camera_active = True
+        print(f"✅ Camera {camera_index} initialized successfully")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error initializing camera: {e}")
+        return False
+
+def camera_capture_loop():
+    """Background thread to continuously capture frames"""
+    global current_frame, camera_active, camera
+    
+    print("🎬 Starting camera capture loop...")
+    
+    while camera_active and camera is not None:
+        try:
+            if camera.isOpened():
+                ret, frame = camera.read()
+                if ret and frame is not None:
+                    # Resize frame for better performance
+                    frame = cv2.resize(frame, (640, 480))
+                    
+                    with frame_lock:
+                        current_frame = frame.copy()
+                else:
+                    print("⚠️ Failed to capture frame")
+                    time.sleep(0.1)
+            else:
+                print("⚠️ Camera not opened")
+                time.sleep(0.1)
+                
+        except Exception as e:
+            print(f"❌ Error in camera capture loop: {e}")
+            time.sleep(0.1)
+    
+    print("🛑 Camera capture loop stopped")
+
+def start_camera_stream():
+    """Start the camera streaming"""
+    global camera_thread, camera_active
+    
+    if camera_active:
+        print("📹 Camera already active")
+        return True
+    
+    if not initialize_camera():
+        return False
+    
+    # Start camera capture thread
+    camera_thread = threading.Thread(target=camera_capture_loop, daemon=True)
+    camera_thread.start()
+    
+    # Update printer state
+    printer_state["video_stream_active"] = True
+    
+    print("✅ Camera stream started")
+    return True
+
+def stop_camera_stream():
+    """Stop the camera streaming"""
+    global camera, camera_active, camera_thread, current_frame
+    
+    print("🛑 Stopping camera stream...")
+    
+    camera_active = False
+    
+    if camera_thread and camera_thread.is_alive():
+        camera_thread.join(timeout=2)
+    
+    if camera:
+        camera.release()
+        camera = None
+    
+    with frame_lock:
+        current_frame = None
+    
+    # Update printer state
+    printer_state["video_stream_active"] = False
+    
+    print("✅ Camera stream stopped")
 
 @app.route('/')
 def home():
@@ -78,8 +215,11 @@ def start_printer():
         printer_state["failure_detected"] = False
         printer_state["timestamp"] = datetime.now().isoformat()
         
-        # Here you would start your actual printer monitoring application
-        # For now, we'll just update the state
+        # Start camera stream
+        if start_camera_stream():
+            printer_state["video_stream_active"] = True
+        else:
+            printer_state["video_stream_active"] = False
         
         return jsonify({
             "success": True,
@@ -98,21 +238,13 @@ def start_printer():
 def stop_printer():
     """Stop 3D printer monitoring"""
     try:
-        global printer_state, video_process
+        global printer_state
         printer_state["is_running"] = False
         printer_state["is_monitoring"] = False
-        printer_state["video_stream_active"] = False
         printer_state["timestamp"] = datetime.now().isoformat()
         
-        # Stop video streaming if active
-        if video_process:
-            try:
-                video_process.terminate()
-                video_process = None
-            except:
-                pass
-        
-        # Here you would stop your actual printer monitoring application
+        # Stop camera stream
+        stop_camera_stream()
         
         return jsonify({
             "success": True,
@@ -197,81 +329,23 @@ def update_print_status():
             "timestamp": datetime.now().isoformat()
         }), 500
 
-def read_frame_from_shared_memory():
-    """Read frame data from shared memory"""
-    global current_frame, camera_active, shared_memory_handle
+def get_current_frame():
+    """Get the current frame from camera"""
+    global current_frame, camera_active
     
-    try:
-        # Try to connect to existing shared memory
-        if shared_memory_handle is None:
-            try:
-                shared_memory_handle = shared_memory.SharedMemory(name="camera_frame")
-                print("✓ Connected to shared memory 'camera_frame'")
-            except FileNotFoundError:
-                print("✗ Shared memory 'camera_frame' not found")
-                return None
-        
-        # Read frame data from shared memory
-        frame_bytes = bytes(shared_memory_handle.buf)
-        
-        # Check if we have valid data (not all zeros)
-        if len(frame_bytes) == 0 or all(b == 0 for b in frame_bytes[:100]):
-            print("⚠ Shared memory contains no data or all zeros")
-            return None
-        
-        # Convert bytes back to numpy array
-        frame_array = np.frombuffer(frame_bytes, dtype=np.uint8)
-        
-        # Calculate the expected size for 640x480x3
-        expected_size = 640 * 480 * 3
-        
-        # Check if we have the right amount of data
-        if len(frame_array) != expected_size:
-            print(f"⚠ Frame size mismatch: got {len(frame_array)} bytes, expected {expected_size}")
-            # Try to handle different sizes by truncating or padding
-            if len(frame_array) > expected_size:
-                frame_array = frame_array[:expected_size]
-                print(f"Truncated to {len(frame_array)} bytes")
-            else:
-                # Pad with zeros if too small
-                padded_array = np.zeros(expected_size, dtype=np.uint8)
-                padded_array[:len(frame_array)] = frame_array
-                frame_array = padded_array
-                print(f"Padded to {len(frame_array)} bytes")
-        
-        # Reshape to image dimensions
-        frame_rgb = frame_array.reshape((480, 640, 3))
-        
-        # Convert RGB to BGR for OpenCV
-        frame_bgr = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
-        
-        # Encode as JPEG
-        _, buffer = cv2.imencode('.jpg', frame_bgr, [cv2.IMWRITE_JPEG_QUALITY, 80])
-        
-        return buffer.tobytes()
-        
-    except Exception as e:
-        print(f"Error reading from shared memory: {e}")
+    if not camera_active or current_frame is None:
         return None
-
-def read_camera_status():
-    """Read camera status from status file"""
-    global camera_active
     
     try:
-        if os.path.exists("/tmp/camera_status.json"):
-            with open("/tmp/camera_status.json", "r") as f:
-                status_data = json.load(f)
-                camera_active = status_data.get("camera_active", False)
-                frame_count = status_data.get("frame_count", 0)
-                print(f"📊 Camera status: {'Active' if camera_active else 'Inactive'}, Frames: {frame_count}")
-                return True
-        else:
-            print("📁 Camera status file not found")
+        with frame_lock:
+            if current_frame is not None:
+                # Encode frame as JPEG
+                _, buffer = cv2.imencode('.jpg', current_frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+                return buffer.tobytes()
     except Exception as e:
-        print(f"Error reading camera status: {e}")
+        print(f"Error encoding frame: {e}")
     
-    return False
+    return None
 
 def create_placeholder_frame():
     """Create a placeholder frame when no camera is active"""
@@ -299,11 +373,8 @@ def video_feed():
         global current_frame, camera_active
         
         while True:
-            # Read camera status
-            read_camera_status()
-            
-            # Try to read frame from shared memory
-            frame_data = read_frame_from_shared_memory()
+            # Get current frame from camera
+            frame_data = get_current_frame()
             
             if frame_data and camera_active:
                 # Send the actual camera frame
@@ -324,6 +395,18 @@ def video_feed():
     
     return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
+def cleanup_on_exit():
+    """Cleanup function to properly close camera on exit"""
+    print("🧹 Cleaning up on exit...")
+    stop_camera_stream()
+
 if __name__ == '__main__':
+    import atexit
+    atexit.register(cleanup_on_exit)
+    
+    print("🚀 Starting 3D Printer Monitoring System...")
+    print("📹 Camera will be initialized when monitoring starts")
+    print("🌐 Server running on http://0.0.0.0:8000")
+    
     # Run on all interfaces so it can be accessed from other devices
     app.run(host='0.0.0.0', port=8000, debug=True)
