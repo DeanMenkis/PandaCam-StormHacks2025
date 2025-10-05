@@ -6,12 +6,10 @@ import ErrorBoundary from './ErrorBoundary';
 
 function App() {
   const [printerStatus, setPrinterStatus] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [aiStatus, setAiStatus] = useState(null);
-  const [isRetrying, setIsRetrying] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [countdown, setCountdown] = useState(0);
   const [interval, setInterval] = useState(15); // Default 15 seconds
@@ -68,8 +66,8 @@ function App() {
       if (response.data.success) {
         setInterval(intervalSeconds);
         setError(null);
-        // Refresh AI status to get updated interval
-        fetchAiStatus();
+        // Refresh printer status to get updated data
+        fetchPrinterStatus();
       } else {
         setError('Failed to set interval: ' + (response.data.error || 'Unknown error'));
       }
@@ -113,107 +111,30 @@ function App() {
     }
   };
 
-  const fetchPrinterStatus = async (retryCount = 0) => {
-    // Prevent multiple simultaneous retries
-    if (isRetrying && retryCount > 0) {
-      return;
-    }
-    
+  const fetchPrinterStatus = async () => {
     try {
-      setLoading(true);
-      if (retryCount > 0) {
-        setIsRetrying(true);
-      }
-      const response = await axios.get('/api/printer/status', { timeout: 25000 }); // Increased to 25s
+      console.log('📡 Fetching printer status...');
+      const response = await axios.get('/api/printer/status', { timeout: 5000 });
+      
       if (response.data.success) {
         const newStatus = response.data.data;
-        
-        // Debug logging for status changes
-        if (printerStatus && (
-          printerStatus.print_status !== newStatus.print_status ||
-          printerStatus.is_running !== newStatus.is_running ||
-          printerStatus.failure_detected !== newStatus.failure_detected
-        )) {
-          console.log('📊 Status Change Detected:', {
-            old_print_status: printerStatus.print_status,
-            new_print_status: newStatus.print_status,
-            old_is_running: printerStatus.is_running,
-            new_is_running: newStatus.is_running,
-            old_failure: printerStatus.failure_detected,
-            new_failure: newStatus.failure_detected,
-            timestamp: new Date().toLocaleTimeString()
-          });
-        }
+        console.log('📊 Received status:', {
+          print_status: newStatus.print_status,
+          ai_binary_status: newStatus.ai_binary_status,
+          is_running: newStatus.is_running
+        });
         
         setPrinterStatus(newStatus);
         setLastUpdated(new Date().toLocaleTimeString());
         setError(null);
-        setIsRetrying(false); // Reset retry state on success
-      } else {
-        setError('Failed to fetch printer status');
       }
     } catch (err) {
-      console.error('Error fetching printer status:', err);
-      
-      // Retry logic for network issues and timeouts
-      if (retryCount < 2 && (err.code === 'ECONNABORTED' || err.code === 'NETWORK_ERROR' || err.message.includes('timeout'))) {
-        console.log(`🔄 Retrying printer status fetch (attempt ${retryCount + 1}) - ${err.message}`);
-        setError(`Backend is slow to respond - retrying... (attempt ${retryCount + 1}/2)`);
-        setTimeout(() => fetchPrinterStatus(retryCount + 1), 3000);
-        return;
-      }
-      
-      // More user-friendly error messages for final failure
-      if (err.message.includes('timeout')) {
-        setError('Backend connection timeout - please check if the server is running');
-      } else {
-        setError('Error connecting to backend: ' + err.message);
-      }
-      setIsRetrying(false); // Reset retry state on final failure
-    } finally {
-      setLoading(false);
+      console.error('❌ Error fetching status:', err.message);
+      setError('Failed to fetch status: ' + err.message);
     }
   };
 
-  const fetchAiStatus = async (retryCount = 0) => {
-    try {
-      const response = await axios.get('/api/ai/status', { timeout: 25000 }); // Increased to 25s
-      if (response.data.success) {
-        const newAiStatus = response.data.data;
-        
-        // Debug logging to track AI status updates
-        if (aiStatus && newAiStatus.last_ai_analysis !== aiStatus.last_ai_analysis) {
-          console.log('🔄 AI Status Updated:', {
-            old_response: aiStatus.ai_response,
-            new_response: newAiStatus.ai_response,
-            old_timestamp: aiStatus.last_ai_analysis,
-            new_timestamp: newAiStatus.last_ai_analysis,
-            binary_status: newAiStatus.ai_binary_status
-          });
-        }
-        
-        
-        setAiStatus(newAiStatus);
-        
-        // Sync frontend interval state with backend
-        if (newAiStatus.monitoring_interval && newAiStatus.monitoring_interval !== interval) {
-          setInterval(newAiStatus.monitoring_interval);
-        }
-      }
-    } catch (err) {
-      console.error('Error fetching AI status:', err);
-      
-      // Retry logic for network issues and timeouts
-      if (retryCount < 2 && (err.code === 'ECONNABORTED' || err.code === 'NETWORK_ERROR' || err.message.includes('timeout'))) {
-        console.log(`🔄 Retrying AI status fetch (attempt ${retryCount + 1}) - ${err.message}`);
-        setTimeout(() => fetchAiStatus(retryCount + 1), 3000);
-        return;
-      }
-      
-      // Log final AI fetch failure (but don't show error to user since AI is optional)
-      console.warn('AI status fetch failed after retries:', err.message);
-    }
-  };
+  // Removed fetchAiStatus - we get all data from printer status endpoint
 
 
   const startAiMonitoring = async () => {
@@ -293,17 +214,30 @@ function App() {
   };
 
   useEffect(() => {
+    // Initial fetch
     fetchPrinterStatus();
-    fetchAiStatus();
-    // Auto-refresh every 2 seconds for faster response
-    const interval = setInterval(() => {
-      if (!isRetrying) { // Only poll if not currently retrying
-        fetchPrinterStatus();
-        fetchAiStatus();
+    
+    // Use recursive setTimeout instead of setInterval (more reliable during video streaming)
+    let isActive = true;
+    
+    const scheduleNext = () => {
+      if (isActive) {
+        setTimeout(() => {
+          if (isActive) {
+            console.log('📡 Auto polling - fetching printer status');
+            fetchPrinterStatus();
+            scheduleNext(); // Schedule the next call
+          }
+        }, 5000);
       }
-    }, 2000); // Reduced from 8s to 2s for faster response
-    return () => clearInterval(interval);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    };
+    
+    // Start the polling cycle
+    scheduleNext();
+    
+    return () => {
+      isActive = false; // Stop the polling when component unmounts
+    };
   }, []);
 
   const getStatusColor = (isRunning, failureDetected) => {
@@ -318,27 +252,58 @@ function App() {
     return 'STOPPED';
   };
 
-  const getPrintStatusColor = (printStatus) => {
-    switch (printStatus) {
-      case 'printing': return '#2196F3'; // Blue
-      case 'paused': return '#FF9800'; // Orange
-      case 'completed': return '#4CAF50'; // Green
-      case 'failed': return '#F44336'; // Red
-      default: return '#9E9E9E'; // Gray for idle
+  const getPrintStatusColor = (printStatus, aiBinaryStatus) => {
+    // Convert to number to handle string values
+    const binaryStatus = Number(aiBinaryStatus);
+    
+    console.log(`🎨 Color calc: status=${printStatus}, ai=${binaryStatus}`);
+    
+    // If AI says it's good (binary_status === 1), show green regardless of print status
+    if (binaryStatus === 1) {
+      console.log('🎨 → GREEN (AI good)');
+      return '#4CAF50'; // Green for good AI assessment
     }
+    
+    // Otherwise, use the normal color logic
+    let color;
+    switch (printStatus) {
+      case 'printing': color = '#2196F3'; break; // Blue
+      case 'paused': color = '#FF9800'; break; // Orange
+      case 'completed': color = '#4CAF50'; break; // Green
+      case 'failed': color = '#F44336'; break; // Red
+      case 'warning': color = '#FF9800'; break; // Orange for warnings
+      default: color = '#9E9E9E'; break; // Gray for idle
+    }
+    
+    console.log(`🎨 → ${color} (${printStatus})`);
+    return color;
   };
 
-  const getPrintStatusText = (printStatus) => {
+  const getPrintStatusText = (printStatus, aiBinaryStatus) => {
+    // Convert to number to handle string values
+    const binaryStatus = Number(aiBinaryStatus);
+    
+    // If AI says it's good, show a positive status
+    if (binaryStatus === 1) {
+      switch (printStatus) {
+        case 'printing': return 'PRINTING ✅';
+        case 'idle': return 'IDLE ✅';
+        default: return 'GOOD ✅';
+      }
+    }
+    
+    // Otherwise, use the normal text logic
     switch (printStatus) {
       case 'printing': return 'PRINTING';
       case 'paused': return 'PAUSED';
       case 'completed': return 'COMPLETED';
       case 'failed': return 'FAILED';
+      case 'warning': return 'WARNING';
       default: return 'IDLE';
     }
   };
 
-  if (loading && !printerStatus) {
+  if (!printerStatus) {
     return (
       <div className="app">
         <div className="loading">
@@ -470,7 +435,15 @@ function App() {
           <span>Status: {getStatusText(printerStatus?.is_running, printerStatus?.failure_detected)}</span>
         </div>
         {lastUpdated && (
-          <p className="last-updated">Last updated: {lastUpdated}</p>
+          <p className="last-updated">
+            Last updated: {lastUpdated}
+            <button 
+              onClick={fetchPrinterStatus} 
+              style={{marginLeft: '10px', padding: '2px 8px', fontSize: '12px'}}
+            >
+              🔄 Test Update
+            </button>
+          </p>
         )}
       </header>
 
@@ -494,17 +467,17 @@ function App() {
               <div className="print-status-indicator">
                 <div 
                   className="print-status-dot" 
-                  style={{ backgroundColor: getPrintStatusColor(printerStatus?.print_status) }}
+                  style={{ backgroundColor: getPrintStatusColor(printerStatus?.print_status, printerStatus?.ai_binary_status) }}
                 ></div>
                 <span className="print-status-text">
-                  {getPrintStatusText(printerStatus?.print_status)}
+                  {getPrintStatusText(printerStatus?.print_status, printerStatus?.ai_binary_status)}
                 </span>
                 {/* AI Binary Status Indicator */}
-                {aiStatus?.ai_binary_status !== undefined && aiStatus?.ai_response && aiStatus.ai_response !== "No analysis yet." && (
+                {printerStatus?.ai_binary_status !== undefined && printerStatus?.ai_response && printerStatus.ai_response !== "No analysis yet." && (
                   <div className="ai-binary-indicator">
                     <span className="ai-binary-label">AI Assessment:</span>
-                    <span className={`ai-binary-value ${aiStatus.ai_binary_status === 1 ? 'good' : 'bad'}`}>
-                      {aiStatus.ai_binary_status === 1 ? '✅ GOOD' : '❌ BAD'}
+                    <span className={`ai-binary-value ${printerStatus.ai_binary_status === 1 ? 'good' : 'bad'}`}>
+                      {printerStatus.ai_binary_status === 1 ? '✅ GOOD' : '❌ BAD'}
                     </span>
                   </div>
                 )}
@@ -718,7 +691,17 @@ function App() {
               </div>
 
               {/* AI Analysis Results */}
-              {aiStatus?.ai_response && aiStatus.ai_response !== "No analysis yet." && (
+              {(() => {
+                const shouldShow = aiStatus?.ai_response && aiStatus.ai_response !== "No analysis yet.";
+                console.log('🔍 AI Analysis Display Check:', {
+                  has_aiStatus: !!aiStatus,
+                  has_response: !!aiStatus?.ai_response,
+                  response_value: aiStatus?.ai_response,
+                  is_not_default: aiStatus?.ai_response !== "No analysis yet.",
+                  should_show: shouldShow
+                });
+                return shouldShow;
+              })() && (
                 <div className="ai-analysis-card">
                   <h3>Latest AI Analysis 
                     {aiStatus.last_ai_analysis && (
@@ -747,7 +730,17 @@ function App() {
               )}
 
               {/* AI Response Display */}
-              {aiStatus?.ai_response && aiStatus.ai_response !== "No analysis yet." && (
+              {(() => {
+                const shouldShow = aiStatus?.ai_response && aiStatus.ai_response !== "No analysis yet.";
+                console.log('🔍 AI Response Display Check:', {
+                  has_aiStatus: !!aiStatus,
+                  has_response: !!aiStatus?.ai_response,
+                  response_value: aiStatus?.ai_response,
+                  is_not_default: aiStatus?.ai_response !== "No analysis yet.",
+                  should_show: shouldShow
+                });
+                return shouldShow;
+              })() && (
                 <div className="ai-prompt-card">
                   <h3>🤖 Gemini AI Response</h3>
                   <div className="ai-prompt-content">

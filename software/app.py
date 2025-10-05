@@ -1630,6 +1630,7 @@ def get_ai_prompt():
 
 
 
+
 def create_placeholder_frame(message="Camera Not Active", submessage="Initializing camera..."):
     """Create a placeholder frame when no camera is active"""
     try:
