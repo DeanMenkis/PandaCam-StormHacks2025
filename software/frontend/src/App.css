@@ -1030,6 +1030,16 @@
   color: #2196f3;
   font-size: 1.2rem;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.update-indicator {
+  font-size: 0.8rem;
+  color: #4caf50;
+  font-weight: 400;
+  opacity: 0.8;
 }
 
 .ai-response {

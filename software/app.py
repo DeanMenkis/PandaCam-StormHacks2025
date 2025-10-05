@@ -1033,6 +1033,7 @@ def get_ai_status():
                 "ai_monitoring_active": printer_state["ai_monitoring_active"],
                 "ai_response": printer_state["ai_response"],
                 "ai_confidence": printer_state["ai_confidence"],
+                "ai_binary_status": printer_state["ai_binary_status"],
                 "print_status": printer_state["print_status"],
                 "last_ai_analysis": printer_state["last_ai_analysis"],
                 "failure_detected": printer_state["failure_detected"],

@@ -33,7 +33,20 @@ function App() {
     try {
       const response = await axios.get('/api/ai/status');
       if (response.data.success) {
-        setAiStatus(response.data.data);
+        const newAiStatus = response.data.data;
+        
+        // Debug logging to track AI status updates
+        if (aiStatus && newAiStatus.last_ai_analysis !== aiStatus.last_ai_analysis) {
+          console.log('🔄 AI Status Updated:', {
+            old_response: aiStatus.ai_response,
+            new_response: newAiStatus.ai_response,
+            old_timestamp: aiStatus.last_ai_analysis,
+            new_timestamp: newAiStatus.last_ai_analysis,
+            binary_status: newAiStatus.ai_binary_status
+          });
+        }
+        
+        setAiStatus(newAiStatus);
       }
     } catch (err) {
       console.error('Error fetching AI status:', err);
@@ -117,6 +130,7 @@ function App() {
       fetchAiStatus();
     }, 3000);
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const getStatusColor = (isRunning, failureDetected) => {
@@ -308,6 +322,14 @@ function App() {
                   </div>
                 </div>
               )}
+              
+              {/* Failure Alert */}
+              {printerStatus?.failure_detected && (
+                <div className="failure-alert">
+                  <h3>⚠️ PRINT FAILURE DETECTED</h3>
+                  <p>Last failure: {printerStatus.last_failure_time ? new Date(printerStatus.last_failure_time).toLocaleString() : 'Unknown'}</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -331,13 +353,6 @@ function App() {
               </button>
             </div>
             
-            {/* Failure Alert */}
-            {printerStatus?.failure_detected && (
-              <div className="failure-alert">
-                <h3>⚠️ PRINT FAILURE DETECTED</h3>
-                <p>Last failure: {printerStatus.last_failure_time ? new Date(printerStatus.last_failure_time).toLocaleString() : 'Unknown'}</p>
-              </div>
-            )}
           </div>
         </div>
 
@@ -376,7 +391,13 @@ function App() {
               {/* AI Analysis Results */}
               {aiStatus?.ai_response && (
                 <div className="ai-analysis-card">
-                  <h3>Latest AI Analysis</h3>
+                  <h3>Latest AI Analysis 
+                    {aiStatus.last_ai_analysis && (
+                      <span className="update-indicator">
+                        • Updated {new Date(aiStatus.last_ai_analysis).toLocaleTimeString()}
+                      </span>
+                    )}
+                  </h3>
                   <div className="ai-response">
                     <p>{aiStatus.ai_response}</p>
                   </div>
@@ -396,24 +417,9 @@ function App() {
                 </div>
               )}
 
-              {/* Print Status from AI */}
-              {aiStatus?.print_status && aiStatus.print_status !== 'idle' && (
-                <div className="ai-print-status">
-                  <h4>AI Print Assessment</h4>
-                  <div className="ai-print-indicator">
-                    <div 
-                      className="ai-print-dot" 
-                      style={{ backgroundColor: getPrintStatusColor(aiStatus.print_status) }}
-                    ></div>
-                    <span className="ai-print-text">
-                      {getPrintStatusText(aiStatus.print_status)}
-                    </span>
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
           </div>
-        </div>
 
         {/* Status Information */}
         <div className="status-info">
