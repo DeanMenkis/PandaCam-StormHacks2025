@@ -8,6 +8,7 @@ function App() {
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [aiStatus, setAiStatus] = useState(null);
 
   const fetchPrinterStatus = async () => {
     try {
@@ -25,6 +26,51 @@ function App() {
       console.error('Error fetching printer status:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAiStatus = async () => {
+    try {
+      const response = await axios.get('/api/ai/status');
+      if (response.data.success) {
+        setAiStatus(response.data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching AI status:', err);
+    }
+  };
+
+  const startAiMonitoring = async () => {
+    try {
+      setActionLoading(true);
+      const response = await axios.post('/api/ai/start');
+      if (response.data.success) {
+        setAiStatus(response.data.data);
+        setError(null);
+      } else {
+        setError('Failed to start AI monitoring');
+      }
+    } catch (err) {
+      setError('Error starting AI monitoring: ' + err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const stopAiMonitoring = async () => {
+    try {
+      setActionLoading(true);
+      const response = await axios.post('/api/ai/stop');
+      if (response.data.success) {
+        setAiStatus(response.data.data);
+        setError(null);
+      } else {
+        setError('Failed to stop AI monitoring');
+      }
+    } catch (err) {
+      setError('Error stopping AI monitoring: ' + err.message);
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -64,8 +110,12 @@ function App() {
 
   useEffect(() => {
     fetchPrinterStatus();
+    fetchAiStatus();
     // Auto-refresh every 3 seconds
-    const interval = setInterval(fetchPrinterStatus, 3000);
+    const interval = setInterval(() => {
+      fetchPrinterStatus();
+      fetchAiStatus();
+    }, 3000);
     return () => clearInterval(interval);
   }, []);
 
@@ -279,6 +329,77 @@ function App() {
                 <p>Last failure: {printerStatus.last_failure_time ? new Date(printerStatus.last_failure_time).toLocaleString() : 'Unknown'}</p>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* AI Monitoring Section */}
+        <div className="ai-monitoring-section">
+          <div className="ai-status-card">
+            <h2>🤖 AI Monitoring</h2>
+            <div className="ai-status-content">
+              <div className="ai-status-indicator">
+                <div 
+                  className="ai-status-dot" 
+                  style={{ backgroundColor: aiStatus?.ai_monitoring_active ? '#4CAF50' : '#9E9E9E' }}
+                ></div>
+                <span className="ai-status-text">
+                  {aiStatus?.ai_monitoring_active ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+              
+              <div className="ai-controls">
+                <button 
+                  className={`control-btn start-btn ${aiStatus?.ai_monitoring_active ? 'disabled' : ''}`}
+                  onClick={startAiMonitoring}
+                  disabled={aiStatus?.ai_monitoring_active || actionLoading}
+                >
+                  {actionLoading ? 'Starting...' : 'Start AI Monitoring'}
+                </button>
+                <button 
+                  className={`control-btn stop-btn ${!aiStatus?.ai_monitoring_active ? 'disabled' : ''}`}
+                  onClick={stopAiMonitoring}
+                  disabled={!aiStatus?.ai_monitoring_active || actionLoading}
+                >
+                  {actionLoading ? 'Stopping...' : 'Stop AI Monitoring'}
+                </button>
+              </div>
+
+              {/* AI Analysis Results */}
+              {aiStatus?.ai_response && (
+                <div className="ai-analysis-card">
+                  <h3>Latest AI Analysis</h3>
+                  <div className="ai-response">
+                    <p>{aiStatus.ai_response}</p>
+                  </div>
+                  <div className="ai-metadata">
+                    <span className="ai-confidence">
+                      Confidence: {Math.round((aiStatus.ai_confidence || 0) * 100)}%
+                    </span>
+                    {aiStatus.last_ai_analysis && (
+                      <span className="ai-timestamp">
+                        {new Date(aiStatus.last_ai_analysis).toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Print Status from AI */}
+              {aiStatus?.print_status && aiStatus.print_status !== 'idle' && (
+                <div className="ai-print-status">
+                  <h4>AI Print Assessment</h4>
+                  <div className="ai-print-indicator">
+                    <div 
+                      className="ai-print-dot" 
+                      style={{ backgroundColor: getPrintStatusColor(aiStatus.print_status) }}
+                    ></div>
+                    <span className="ai-print-text">
+                      {getPrintStatusText(aiStatus.print_status)}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

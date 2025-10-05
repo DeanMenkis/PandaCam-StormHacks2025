@@ -154,13 +154,34 @@ class CameraManager:
             print("📹 Trying PiCamera2...")
             self.camera = Picamera2()
             
-            # Create a more compatible configuration
+            # Create a more compatible configuration with better white balance
             config = self.camera.create_video_configuration(
                 main={"size": (640, 480), "format": "RGB888"},
-                controls={"FrameRate": 15}
+                controls={
+                    "FrameRate": 15,
+                    "AwbEnable": True,  # Enable auto white balance
+                    "AwbMode": 0,  # Auto white balance mode (0 = auto)
+                    "Brightness": 0.0,  # Neutral brightness
+                    "Contrast": 1.0,  # Normal contrast
+                    "Saturation": 1.0,  # Normal saturation
+                    "ExposureTime": 0,  # Auto exposure
+                    "AnalogueGain": 0,  # Auto gain
+                }
             )
             self.camera.configure(config)
             self.camera.start()
+            
+            # Set additional controls after starting
+            try:
+                # Force auto white balance to recalibrate
+                self.camera.set_controls({
+                    "AwbEnable": True,
+                    "AwbMode": 0,  # Try different modes: 0=auto, 1=incandescent, 2=tungsten, 3=fluorescent, 4=indoor, 5=daylight, 6=cloudy
+                })
+                print("🎨 White balance controls applied")
+            except Exception as wb_error:
+                print(f"⚠️ White balance control warning: {wb_error}")
+                # Continue anyway, basic functionality should still work
             
             # Give camera more time to warm up
             time.sleep(3)
