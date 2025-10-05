@@ -11,6 +11,7 @@ import multiprocessing as mp
 from multiprocessing import shared_memory
 import numpy as np
 import cv2
+import requests
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for React frontend
@@ -25,12 +26,17 @@ printer_state = {
     "failure_detected": False,
     "last_failure_time": None,
     "video_stream_active": False,
-    "print_status": "idle",  # idle, printing, paused, completed, failed
+    "print_status": "idle",  # idle, printing, paused, completed, failed, warning, unknown
     "print_progress": 0,  # 0-100
     "print_time_elapsed": 0,  # in minutes
     "print_time_remaining": 0,  # in minutes
+    "ai_analysis": None,  # Latest AI analysis result
+    "last_ai_analysis_time": None,
     "timestamp": datetime.now().isoformat()
 }
+
+# Monitoring service configuration
+MONITORING_SERVICE_URL = "http://127.0.0.1:8001"  # If running as separate service
 
 # Video streaming process (will be set when streaming starts)
 video_process = None
@@ -78,8 +84,29 @@ def start_printer():
         printer_state["failure_detected"] = False
         printer_state["timestamp"] = datetime.now().isoformat()
         
-        # Here you would start your actual printer monitoring application
-        # For now, we'll just update the state
+        # Start the monitoring service
+        try:
+            # Try to start monitoring service via subprocess
+            subprocess.Popen([
+                "python3", 
+                "/home/admin/Desktop/CircuitBreakers-StormHacks-2025/software/monitoring_service.py"
+            ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            
+            # Give it a moment to start
+            time.sleep(2)
+            
+            # Try to communicate with monitoring service to start AI monitoring
+            try:
+                response = requests.post(f"{MONITORING_SERVICE_URL}/start-ai-monitoring", timeout=5)
+                if response.status_code == 200:
+                    print("AI monitoring started successfully")
+                else:
+                    print("Warning: Could not start AI monitoring via API")
+            except:
+                print("Warning: Monitoring service API not available, but service may still be running")
+                
+        except Exception as e:
+            print(f"Warning: Could not start monitoring service: {e}")
         
         return jsonify({
             "success": True,
@@ -112,7 +139,16 @@ def stop_printer():
             except:
                 pass
         
-        # Here you would stop your actual printer monitoring application
+        # Stop the monitoring service
+        try:
+            # Try to stop AI monitoring via API
+            response = requests.post(f"{MONITORING_SERVICE_URL}/stop-ai-monitoring", timeout=5)
+            if response.status_code == 200:
+                print("AI monitoring stopped successfully")
+            else:
+                print("Warning: Could not stop AI monitoring via API")
+        except:
+            print("Warning: Monitoring service API not available")
         
         return jsonify({
             "success": True,
@@ -176,6 +212,9 @@ def update_print_status():
                 printer_state["print_time_elapsed"] = data["print_time_elapsed"]
             if "print_time_remaining" in data:
                 printer_state["print_time_remaining"] = data["print_time_remaining"]
+            if "ai_analysis" in data:
+                printer_state["ai_analysis"] = data["ai_analysis"]
+                printer_state["last_ai_analysis_time"] = datetime.now().isoformat()
             
             printer_state["timestamp"] = datetime.now().isoformat()
             
@@ -198,60 +237,26 @@ def update_print_status():
         }), 500
 
 def read_frame_from_shared_memory():
-    """Read frame data from shared memory"""
-    global current_frame, camera_active, shared_memory_handle
+    """Read frame data from file (simplified approach)"""
+    global current_frame, camera_active
     
     try:
-        # Try to connect to existing shared memory
-        if shared_memory_handle is None:
-            try:
-                shared_memory_handle = shared_memory.SharedMemory(name="camera_frame")
-                print("✓ Connected to shared memory 'camera_frame'")
-            except FileNotFoundError:
-                print("✗ Shared memory 'camera_frame' not found")
+        # Read the latest frame from file
+        frame_file = "/tmp/latest_frame.jpg"
+        
+        if os.path.exists(frame_file):
+            with open(frame_file, "rb") as f:
+                frame_data = f.read()
+            
+            if len(frame_data) > 0:
+                return frame_data
+            else:
                 return None
-        
-        # Read frame data from shared memory
-        frame_bytes = bytes(shared_memory_handle.buf)
-        
-        # Check if we have valid data (not all zeros)
-        if len(frame_bytes) == 0 or all(b == 0 for b in frame_bytes[:100]):
-            print("⚠ Shared memory contains no data or all zeros")
+        else:
             return None
         
-        # Convert bytes back to numpy array
-        frame_array = np.frombuffer(frame_bytes, dtype=np.uint8)
-        
-        # Calculate the expected size for 640x480x3
-        expected_size = 640 * 480 * 3
-        
-        # Check if we have the right amount of data
-        if len(frame_array) != expected_size:
-            print(f"⚠ Frame size mismatch: got {len(frame_array)} bytes, expected {expected_size}")
-            # Try to handle different sizes by truncating or padding
-            if len(frame_array) > expected_size:
-                frame_array = frame_array[:expected_size]
-                print(f"Truncated to {len(frame_array)} bytes")
-            else:
-                # Pad with zeros if too small
-                padded_array = np.zeros(expected_size, dtype=np.uint8)
-                padded_array[:len(frame_array)] = frame_array
-                frame_array = padded_array
-                print(f"Padded to {len(frame_array)} bytes")
-        
-        # Reshape to image dimensions
-        frame_rgb = frame_array.reshape((480, 640, 3))
-        
-        # Convert RGB to BGR for OpenCV
-        frame_bgr = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
-        
-        # Encode as JPEG
-        _, buffer = cv2.imencode('.jpg', frame_bgr, [cv2.IMWRITE_JPEG_QUALITY, 80])
-        
-        return buffer.tobytes()
-        
     except Exception as e:
-        print(f"Error reading from shared memory: {e}")
+        print(f"Error reading frame from file: {e}")
         return None
 
 def read_camera_status():
@@ -280,9 +285,11 @@ def create_placeholder_frame():
         placeholder = np.zeros((480, 640, 3), dtype=np.uint8)
         
         # Add text to the placeholder
-        cv2.putText(placeholder, "Camera Not Active", (150, 200), 
-                   cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-        cv2.putText(placeholder, "Waiting for camera...", (120, 250), 
+        cv2.putText(placeholder, "AI Monitoring Active", (120, 200), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        cv2.putText(placeholder, "Video streaming not available", (80, 250), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.8, (200, 200, 200), 2)
+        cv2.putText(placeholder, "Photos captured every 30s", (100, 300), 
                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (200, 200, 200), 2)
         
         # Encode as JPEG
