@@ -7,6 +7,7 @@ import time
 from datetime import datetime, timedelta
 import requests
 import json
+import pytz
 
 try:
     from config import (
@@ -24,10 +25,23 @@ class AlertSystem:
     def can_send_alert(self):
         """Check if enough time has passed since last alert"""
         if self.last_alert_time is None:
+            print("📢 Alert system: No previous alerts, can send alert")
             return True
         
-        time_since_last = datetime.now() - self.last_alert_time
-        return time_since_last >= self.alert_cooldown
+        # Use local time for comparison
+        local_tz = pytz.timezone('America/Los_Angeles')
+        current_local_time = datetime.now(local_tz).replace(tzinfo=None)
+        time_since_last = current_local_time - self.last_alert_time
+        can_send = time_since_last >= self.alert_cooldown
+        
+        if not can_send:
+            remaining_time = self.alert_cooldown - time_since_last
+            remaining_minutes = remaining_time.total_seconds() / 60
+            print(f"⏰ Alert cooldown active: {remaining_minutes:.1f} minutes remaining until next alert")
+        else:
+            print("📢 Alert system: Cooldown period passed, can send alert")
+            
+        return can_send
     
     
     def send_discord(self, message, image_data=None, filename="print_failure.jpg"):
@@ -74,11 +88,16 @@ class AlertSystem:
     
     def send_print_failure_alert(self, print_status, confidence, gemini_response, image_data=None, gemini_prompt=None):
         """Send comprehensive alert for print failure with image and full details"""
+        print(f"🚨 Attempting to send Discord alert for print failure (Status: {print_status}, Confidence: {confidence:.1%})")
+        
         if not self.can_send_alert():
-            print("⏰ Alert cooldown active, skipping notification")
+            print("⏰ Alert cooldown active, skipping Discord notification")
             return False
         
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        # Get local time (PDT/UTC-7)
+        local_tz = pytz.timezone('America/Los_Angeles')
+        local_time = datetime.now(local_tz)
+        timestamp = local_time.strftime("%Y-%m-%d %H:%M:%S %Z")
         
         # Create concise alert message (Discord has 2000 char limit)
         message = f"""🚨 **3D PRINTER FAILURE ALERT** 🚨
@@ -97,11 +116,12 @@ class AlertSystem:
 *Circuit Breakers 3D Printer Monitor*"""
         
         # Send Discord alert with image
-        discord_success = self.send_discord(message, image_data, f"print_failure_{timestamp.replace(':', '-').replace(' ', '_')}.jpg")
+        filename_timestamp = local_time.strftime("%Y%m%d_%H%M%S")
+        discord_success = self.send_discord(message, image_data, f"print_failure_{filename_timestamp}.jpg")
         
         # Update last alert time if alert was sent
         if discord_success:
-            self.last_alert_time = datetime.now()
+            self.last_alert_time = local_time.replace(tzinfo=None)  # Store as naive datetime for comparison
             return True
         
         return False

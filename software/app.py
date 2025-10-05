@@ -7,6 +7,7 @@ import threading
 import time
 import base64
 from datetime import datetime, timedelta
+import pytz
 import numpy as np
 import cv2
 import requests
@@ -1013,7 +1014,9 @@ def ai_monitoring_worker():
                             printer_state["last_failure_time"] = datetime.now().isoformat()
                         
                         # Log AI response with binary classification
-                        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                        local_tz = pytz.timezone('America/Los_Angeles')
+                        local_time = datetime.now(local_tz)
+                        timestamp = local_time.strftime('%Y-%m-%d %H:%M:%S %Z')
                         binary_emoji = "✅" if analysis_result['binary_status'] == 1 else "❌"
                         print(f"🤖 [{timestamp}] AI Analysis: {analysis_result['response_text']}")
                         print(f"   Binary Status: {binary_emoji} {analysis_result['binary_status']} | Print Status: {printer_state['print_status']} | Confidence: {analysis_result['confidence']}")
@@ -1021,14 +1024,22 @@ def ai_monitoring_worker():
                         # Alert for failures
                         if analysis_result['binary_status'] == 0:
                             print(f"🚨 AI DETECTED ISSUE: Binary classification = 0 (not going well)")
+                            print(f"   📊 Status: {analysis_result['print_status']} | Confidence: {analysis_result['confidence']:.1%}")
+                            print(f"   📝 Response: {analysis_result['response_text'][:100]}...")
+                            
                             # Send Discord alert with image and full details
-                            alert_system.send_print_failure_alert(
+                            alert_success = alert_system.send_print_failure_alert(
                                 analysis_result['print_status'],
                                 analysis_result['confidence'],
                                 analysis_result['response_text'],
                                 frame_data,  # Include the captured image
                                 ai_analyzer.prompt  # Include the Gemini prompt
                             )
+                            
+                            if alert_success:
+                                print("✅ Discord alert sent successfully")
+                            else:
+                                print("❌ Discord alert failed or was blocked")
                         
                     else:
                         # Handle analysis error
