@@ -273,6 +273,15 @@ function App() {
                 <span className="print-status-text">
                   {getPrintStatusText(printerStatus?.print_status)}
                 </span>
+                {/* AI Binary Status Indicator */}
+                {aiStatus?.ai_monitoring_active && aiStatus?.ai_binary_status !== undefined && (
+                  <div className="ai-binary-indicator">
+                    <span className="ai-binary-label">AI Assessment:</span>
+                    <span className={`ai-binary-value ${aiStatus.ai_binary_status === 1 ? 'good' : 'bad'}`}>
+                      {aiStatus.ai_binary_status === 1 ? '✅ GOOD' : '❌ BAD'}
+                    </span>
+                  </div>
+                )}
               </div>
               
               {printerStatus?.print_status === 'printing' && (
@@ -372,6 +381,9 @@ function App() {
                     <p>{aiStatus.ai_response}</p>
                   </div>
                   <div className="ai-metadata">
+                    <span className="ai-binary-status">
+                      Binary Status: {aiStatus.ai_binary_status === 1 ? '✅ 1 (Good)' : '❌ 0 (Bad)'}
+                    </span>
                     <span className="ai-confidence">
                       Confidence: {Math.round((aiStatus.ai_confidence || 0) * 100)}%
                     </span>

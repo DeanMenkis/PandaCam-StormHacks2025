@@ -50,6 +50,7 @@ printer_state = {
     "ai_monitoring_active": False,  # AI monitoring status
     "ai_response": None,  # Latest AI analysis response
     "ai_confidence": 0.0,  # AI confidence level (0.5-1.0)
+    "ai_binary_status": 0,  # Binary classification: 1 = good, 0 = bad
     "last_ai_analysis": None,  # Timestamp of last AI analysis
     "timestamp": datetime.now().isoformat()
 }
@@ -442,11 +443,15 @@ Be helpful and specific. If you see a problem, suggest what might be causing it.
                         # Parse the response
                         parsed = self._parse_response(response_text)
                         
+                        # Get binary classification
+                        binary_status = self._get_binary_classification(response_text, parsed['print_status'])
+                        
                         return {
                             'success': True,
                             'response_text': response_text,
                             'print_status': parsed['print_status'],
                             'confidence': parsed['confidence'],
+                            'binary_status': binary_status,  # 1 = good, 0 = bad
                             'error': None
                         }
                 
@@ -556,6 +561,56 @@ Be helpful and specific. If you see a problem, suggest what might be causing it.
             'print_status': print_status,
             'confidence': round(confidence, 2)
         }
+    
+    def _get_binary_classification(self, response_text, print_status):
+        """
+        Convert AI response to binary classification
+        
+        Args:
+            response_text: Raw response from Gemini
+            print_status: Parsed print status
+            
+        Returns:
+            int: 1 if print is going well, 0 if not going well
+        """
+        if not response_text:
+            return 0
+        
+        # Primary classification based on print status
+        if print_status == 'printing':
+            return 1  # Print is going well
+        elif print_status in ['failed', 'warning']:
+            return 0  # Print is not going well
+        elif print_status == 'idle':
+            # For idle status, check if there's actually a printer visible
+            text_upper = response_text.upper()
+            if 'NO PRINTER' in text_upper or 'NOT VISIBLE' in text_upper:
+                return 0  # No printer visible = not going well
+            else:
+                return 1  # Printer visible but idle = neutral/good
+        
+        # Fallback: analyze response text for positive/negative indicators
+        text_upper = response_text.upper()
+        
+        # Positive indicators
+        positive_words = ['GOOD', 'FINE', 'NORMAL', 'SUCCESSFUL', 'WELL', 'PERFECT', 'EXCELLENT', 'SMOOTH']
+        negative_words = ['PROBLEM', 'ISSUE', 'ERROR', 'FAILURE', 'FAILED', 'BAD', 'WRONG', 'BROKEN', 'STUCK']
+        
+        positive_count = sum(1 for word in positive_words if word in text_upper)
+        negative_count = sum(1 for word in negative_words if word in text_upper)
+        
+        if positive_count > negative_count:
+            return 1
+        elif negative_count > positive_count:
+            return 0
+        else:
+            # Tie or no clear indicators - default based on emoji
+            if response_text.startswith('✅'):
+                return 1
+            elif response_text.startswith(('❌', '⚠️')):
+                return 0
+            else:
+                return 0  # Conservative default
 
 # Initialize AI analyzer
 ai_analyzer = GeminiAIAnalyzer(GEMINI_API_KEY, GEMINI_API_URL)
@@ -596,23 +651,35 @@ def ai_monitoring_worker():
                         # Update state based on AI analysis
                         printer_state["ai_response"] = analysis_result['response_text']
                         printer_state["ai_confidence"] = analysis_result['confidence']
-                        printer_state["print_status"] = analysis_result['print_status']
+                        printer_state["ai_binary_status"] = analysis_result['binary_status']
                         printer_state["last_ai_analysis"] = datetime.now().isoformat()
                         
-                        # Handle failure detection
-                        if analysis_result['print_status'] == 'failed':
+                        # Update main print status based on binary classification
+                        if analysis_result['binary_status'] == 1:
+                            # Print is going well
+                            if analysis_result['print_status'] == 'idle':
+                                printer_state["print_status"] = "idle"
+                            else:
+                                printer_state["print_status"] = "printing"
+                            printer_state["failure_detected"] = False
+                        else:
+                            # Print is not going well (binary_status == 0)
+                            if analysis_result['print_status'] == 'failed':
+                                printer_state["print_status"] = "failed"
+                            else:
+                                printer_state["print_status"] = "warning"
                             printer_state["failure_detected"] = True
                             printer_state["last_failure_time"] = datetime.now().isoformat()
-                            print(f"🚨 AI DETECTED PRINT FAILURE: {analysis_result['response_text']}")
-                        else:
-                            # Reset failure if status is good
-                            if analysis_result['print_status'] == 'printing':
-                                printer_state["failure_detected"] = False
                         
-                        # Log AI response
+                        # Log AI response with binary classification
                         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                        binary_emoji = "✅" if analysis_result['binary_status'] == 1 else "❌"
                         print(f"🤖 [{timestamp}] AI Analysis: {analysis_result['response_text']}")
-                        print(f"   Status: {analysis_result['print_status']} | Confidence: {analysis_result['confidence']}")
+                        print(f"   Binary Status: {binary_emoji} {analysis_result['binary_status']} | Print Status: {printer_state['print_status']} | Confidence: {analysis_result['confidence']}")
+                        
+                        # Alert for failures
+                        if analysis_result['binary_status'] == 0:
+                            print(f"🚨 AI DETECTED ISSUE: Binary classification = 0 (not going well)")
                         
                     else:
                         # Handle analysis error
