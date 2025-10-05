@@ -165,13 +165,6 @@ function App() {
     }
   };
 
-  const formatTime = (minutes) => {
-    if (!minutes || minutes === 0) return '0m';
-    const hours = Math.floor(minutes / 60);
-    const mins = Math.floor(minutes % 60);
-    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
-  };
-
   if (loading && !printerStatus) {
     return (
       <div className="app">
@@ -298,31 +291,6 @@ function App() {
                 )}
               </div>
               
-              {printerStatus?.print_status === 'printing' && (
-                <div className="print-progress-section">
-                  <div className="progress-info">
-                    <span className="progress-label">Progress</span>
-                    <span className="progress-percentage">{printerStatus?.print_progress || 0}%</span>
-                  </div>
-                  <div className="progress-bar-container">
-                    <div 
-                      className="progress-bar-fill" 
-                      style={{ width: `${printerStatus?.print_progress || 0}%` }}
-                    ></div>
-                  </div>
-                  <div className="time-info">
-                    <div className="time-item">
-                      <span className="time-label">Elapsed:</span>
-                      <span className="time-value">{formatTime(printerStatus?.print_time_elapsed)}</span>
-                    </div>
-                    <div className="time-item">
-                      <span className="time-label">Remaining:</span>
-                      <span className="time-value">{formatTime(printerStatus?.print_time_remaining)}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
               {/* Failure Alert */}
               {printerStatus?.failure_detected && (
                 <div className="failure-alert">
@@ -333,9 +301,9 @@ function App() {
             </div>
           </div>
 
-          {/* Defect Detection Control */}
+          {/* Camera Control */}
           <div className="control-card">
-            <h2>Defect Detection</h2>
+            <h2>Camera Control</h2>
             <div className="control-buttons">
               <button 
                 className={`control-btn start-btn ${printerStatus?.is_running ? 'disabled' : ''}`}
