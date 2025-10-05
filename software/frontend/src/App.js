@@ -14,6 +14,14 @@ function App() {
   const [countdown, setCountdown] = useState(0);
   const [interval, setInterval] = useState(15); // Default 15 seconds
   
+  // Connection reliability state
+  const [connectionState, setConnectionState] = useState({
+    isConnected: true,
+    consecutiveFailures: 0,
+    lastSuccessfulFetch: null,
+    currentPollingInterval: 5000
+  });
+  
   // White balance controls
   const [whiteBalance, setWhiteBalance] = useState({
     red: 1.8,
@@ -111,10 +119,16 @@ function App() {
     }
   };
 
-  const fetchPrinterStatus = async () => {
+  const fetchPrinterStatus = async (retryCount = 0) => {
     try {
-      console.log('📡 Fetching printer status...');
-      const response = await axios.get('/api/printer/status', { timeout: 5000 });
+      console.log(`📡 Fetching printer status... (attempt ${retryCount + 1})`);
+      const response = await axios.get('/api/printer/status', { 
+        timeout: 10000, // Increased from 5s to 10s
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
       
       if (response.data.success) {
         const newStatus = response.data.data;
@@ -127,10 +141,48 @@ function App() {
         setPrinterStatus(newStatus);
         setLastUpdated(new Date().toLocaleTimeString());
         setError(null);
+        
+        // Update connection state on success
+        setConnectionState(prev => ({
+          isConnected: true,
+          consecutiveFailures: 0,
+          lastSuccessfulFetch: Date.now(),
+          currentPollingInterval: Math.max(5000, prev.currentPollingInterval - 1000) // Gradually speed up
+        }));
+        
+        return true; // Success
       }
     } catch (err) {
-      console.error('❌ Error fetching status:', err.message);
-      setError('Failed to fetch status: ' + err.message);
+      console.error(`❌ Error fetching status (attempt ${retryCount + 1}):`, err.message);
+      
+      // Update connection state on failure
+      setConnectionState(prev => {
+        const newFailures = prev.consecutiveFailures + 1;
+        const newInterval = Math.min(30000, prev.currentPollingInterval + 2000); // Gradually slow down, max 30s
+        
+        return {
+          isConnected: false,
+          consecutiveFailures: newFailures,
+          lastSuccessfulFetch: prev.lastSuccessfulFetch,
+          currentPollingInterval: newInterval
+        };
+      });
+      
+      // Only show error to user if it's the final attempt and we have many consecutive failures
+      if (retryCount >= 2 && connectionState.consecutiveFailures >= 3) {
+        setError('Connection issues - retrying automatically...');
+      }
+      
+      // Retry with exponential backoff
+      if (retryCount < 2) {
+        const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+        console.log(`🔄 Retrying in ${delay}ms...`);
+        setTimeout(() => {
+          fetchPrinterStatus(retryCount + 1);
+        }, delay);
+      }
+      
+      return false; // Failed
     }
   };
 
@@ -217,18 +269,18 @@ function App() {
     // Initial fetch
     fetchPrinterStatus();
     
-    // Use recursive setTimeout instead of setInterval (more reliable during video streaming)
+    // Use recursive setTimeout with adaptive polling (more reliable during video streaming)
     let isActive = true;
     
     const scheduleNext = () => {
       if (isActive) {
         setTimeout(() => {
           if (isActive) {
-            console.log('📡 Auto polling - fetching printer status');
+            console.log(`📡 Auto polling - fetching printer status (interval: ${connectionState.currentPollingInterval}ms)`);
             fetchPrinterStatus();
             scheduleNext(); // Schedule the next call
           }
-        }, 5000);
+        }, connectionState.currentPollingInterval);
       }
     };
     
@@ -238,7 +290,7 @@ function App() {
     return () => {
       isActive = false; // Stop the polling when component unmounts
     };
-  }, []);
+  }, [connectionState.currentPollingInterval]); // Re-run when polling interval changes
 
   const getStatusColor = (isRunning, failureDetected) => {
     if (failureDetected) return '#F44336'; // Red for failure
@@ -433,6 +485,16 @@ function App() {
             style={{ backgroundColor: getStatusColor(printerStatus?.is_running, printerStatus?.failure_detected) }}
           ></div>
           <span>Status: {getStatusText(printerStatus?.is_running, printerStatus?.failure_detected)}</span>
+          <div className="connection-indicator">
+            <div 
+              className="connection-dot" 
+              style={{ backgroundColor: connectionState.isConnected ? '#4CAF50' : '#FF9800' }}
+              title={connectionState.isConnected ? 'Connected' : 'Connection issues - retrying automatically'}
+            ></div>
+            <span className="connection-text">
+              {connectionState.isConnected ? 'Connected' : 'Retrying...'}
+            </span>
+          </div>
         </div>
         {lastUpdated && (
           <p className="last-updated">
