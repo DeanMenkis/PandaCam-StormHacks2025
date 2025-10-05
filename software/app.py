@@ -407,33 +407,66 @@ class CameraManager:
             return False
     
     def _try_opencv(self):
-        """Try to initialize using OpenCV"""
+        """Try to initialize using OpenCV with enhanced compatibility"""
         try:
             print("📹 Trying OpenCV VideoCapture...")
             
-            for camera_index in [0, 1, 2]:
-                print(f"   Testing camera index {camera_index}...")
-                self.cap = cv2.VideoCapture(camera_index)
-                
-                if self.cap.isOpened():
-                    self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-                    self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-                    self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-                    
-                    time.sleep(2)
-                    
-                    # Test capture
-                    ret, frame = self.cap.read()
-                    if ret and frame is not None and frame.size > 0:
-                        self.is_initialized = True
-                        self.camera_type = 'opencv'
-                        print(f"✅ OpenCV camera initialized on index {camera_index}!")
-                        return True
-                    
-                    self.cap.release()
-                    self.cap = None
+            # Try different camera indices and configurations
+            camera_configs = [
+                {"index": 0, "width": 640, "height": 480, "fps": 30},
+                {"index": 0, "width": 320, "height": 240, "fps": 15},
+                {"index": 0, "width": 1280, "height": 720, "fps": 30},
+                {"index": 1, "width": 640, "height": 480, "fps": 30},
+                {"index": 2, "width": 640, "height": 480, "fps": 30},
+            ]
             
-            print("❌ OpenCV failed on all camera indices")
+            for config in camera_configs:
+                print(f"   Testing camera index {config['index']} ({config['width']}x{config['height']})...")
+                
+                # Try different backends
+                backends = [cv2.CAP_ANY, cv2.CAP_V4L2]
+                
+                for backend in backends:
+                    try:
+                        self.cap = cv2.VideoCapture(config['index'], backend)
+                        
+                        if self.cap.isOpened():
+                            # Set camera properties
+                            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, config['width'])
+                            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, config['height'])
+                            self.cap.set(cv2.CAP_PROP_FPS, config['fps'])
+                            self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                            
+                            # Wait for camera to initialize
+                            time.sleep(3)
+                            
+                            # Test multiple frame captures
+                            success_count = 0
+                            for i in range(5):
+                                ret, frame = self.cap.read()
+                                if ret and frame is not None and frame.size > 0:
+                                    success_count += 1
+                                time.sleep(0.2)
+                            
+                            if success_count >= 2:  # At least 2 successful captures
+                                self.is_initialized = True
+                                self.camera_type = 'opencv'
+                                print(f"✅ OpenCV camera initialized on index {config['index']} with {config['width']}x{config['height']}!")
+                                return True
+                            else:
+                                print(f"   ❌ Backend {backend} failed - only {success_count}/5 frames captured")
+                                self.cap.release()
+                                self.cap = None
+                        else:
+                            print(f"   ❌ Backend {backend} - camera not available")
+                            
+                    except Exception as e:
+                        print(f"   ❌ Backend {backend} error: {e}")
+                        if self.cap:
+                            self.cap.release()
+                            self.cap = None
+            
+            print("❌ OpenCV failed on all camera indices and configurations")
             return False
                 
         except Exception as e:
@@ -546,18 +579,25 @@ class CameraManager:
             return None
     
     def _capture_opencv(self):
-        """Capture frame using OpenCV"""
+        """Capture frame using OpenCV with enhanced error handling"""
         try:
-            ret, frame = self.cap.read()
-            if ret and frame is not None:
-                if frame.shape[:2] != (480, 640):
-                    frame = cv2.resize(frame, (640, 480))
-                
-                # Resize frame to 720p 16:9 aspect ratio for AI analysis
-                resized_frame = cv2.resize(frame, (1280, 720))  # 720p 16:9 aspect ratio
-                
-                _, buffer = cv2.imencode('.jpg', resized_frame, [cv2.IMWRITE_JPEG_QUALITY, 90])  # High quality for AI
-                return buffer.tobytes()
+            # Try multiple times to capture a frame
+            for attempt in range(3):
+                ret, frame = self.cap.read()
+                if ret and frame is not None and frame.size > 0:
+                    if frame.shape[:2] != (480, 640):
+                        frame = cv2.resize(frame, (640, 480))
+                    
+                    # Resize frame to 720p 16:9 aspect ratio for AI analysis
+                    resized_frame = cv2.resize(frame, (1280, 720))  # 720p 16:9 aspect ratio
+                    
+                    _, buffer = cv2.imencode('.jpg', resized_frame, [cv2.IMWRITE_JPEG_QUALITY, 90])  # High quality for AI
+                    return buffer.tobytes()
+                else:
+                    if attempt < 2:  # Don't sleep on last attempt
+                        time.sleep(0.1)
+            
+            print("⚠️ OpenCV frame capture failed after 3 attempts")
             return None
         except Exception as e:
             print(f"OpenCV capture error: {e}")
@@ -1806,8 +1846,8 @@ def video_feed():
                     frame_data = camera_manager.capture_frame()
                     
                     if frame_data:
-                        # Send the actual camera frame
-                        frame_response = b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame_data + b'\r\n'
+                        # Send the actual camera frame with Safari-compatible headers
+                        frame_response = b'--frame\r\nContent-Type: image/jpeg\r\nContent-Length: ' + str(len(frame_data)).encode() + b'\r\n\r\n' + frame_data + b'\r\n'
                         if frame_count % 100 == 0:  # Log every 100 frames
                             print(f"📹 Streaming frame {frame_count}")
                     else:
@@ -1815,25 +1855,25 @@ def video_feed():
                         print("⚠️ Camera capture failed, sending placeholder")
                         placeholder_data = create_placeholder_frame("Camera Error", "Failed to capture frame")
                         if placeholder_data:
-                            frame_response = b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + placeholder_data + b'\r\n'
+                            frame_response = b'--frame\r\nContent-Type: image/jpeg\r\nContent-Length: ' + str(len(placeholder_data)).encode() + b'\r\n\r\n' + placeholder_data + b'\r\n'
                         else:
                             # Fallback: send a simple black frame
                             black_frame = np.zeros((480, 640, 3), dtype=np.uint8)
                             _, buffer = cv2.imencode('.jpg', black_frame)
-                            frame_response = b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n'
+                            frame_response = b'--frame\r\nContent-Type: image/jpeg\r\nContent-Length: ' + str(len(buffer)).encode() + b'\r\n\r\n' + buffer.tobytes() + b'\r\n'
                 else:
                     # Camera not active, send placeholder
                     placeholder_data = create_placeholder_frame("Camera Inactive", "Use /api/camera/start to activate")
                     if placeholder_data:
-                        frame_response = b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + placeholder_data + b'\r\n'
+                        frame_response = b'--frame\r\nContent-Type: image/jpeg\r\nContent-Length: ' + str(len(placeholder_data)).encode() + b'\r\n\r\n' + placeholder_data + b'\r\n'
                     else:
                         # Fallback: send a simple black frame
                         black_frame = np.zeros((480, 640, 3), dtype=np.uint8)
                         _, buffer = cv2.imencode('.jpg', black_frame)
-                        frame_response = b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n'
+                        frame_response = b'--frame\r\nContent-Type: image/jpeg\r\nContent-Length: ' + str(len(buffer)).encode() + b'\r\n\r\n' + buffer.tobytes() + b'\r\n'
                 
                 yield frame_response
-                time.sleep(0.01)  # ~100 FPS for ultra-fast streaming
+                time.sleep(0.033)  # ~30 FPS for better Safari compatibility
                 
             except Exception as e:
                 print(f"❌ Error in video streaming: {e}")
@@ -1844,7 +1884,17 @@ def video_feed():
                     yield frame_response
                 time.sleep(1)  # Wait longer on error
     
-    return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(
+        generate_frames(), 
+        mimetype='multipart/x-mixed-replace; boundary=frame',
+        headers={
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
+            'Connection': 'keep-alive',
+            'X-Accel-Buffering': 'no'  # Disable nginx buffering
+        }
+    )
 
 @app.route('/h264_stream')
 def h264_stream():

@@ -22,6 +22,14 @@ function App() {
     currentPollingInterval: 5000
   });
   
+  // Browser detection for video streaming compatibility
+  const [browserInfo, setBrowserInfo] = useState({
+    isSafari: false,
+    isChrome: false,
+    isFirefox: false,
+    preferredStream: 'mjpeg' // Default to MJPEG for better compatibility
+  });
+  
   // White balance controls
   const [whiteBalance, setWhiteBalance] = useState({
     red: 1.8,
@@ -264,6 +272,24 @@ function App() {
       setActionLoading(false);
     }
   };
+
+  // Browser detection
+  useEffect(() => {
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isSafari = /safari/.test(userAgent) && !/chrome/.test(userAgent);
+    const isChrome = /chrome/.test(userAgent) && !/edge/.test(userAgent);
+    const isFirefox = /firefox/.test(userAgent);
+    
+    setBrowserInfo({
+      isSafari,
+      isChrome,
+      isFirefox,
+      preferredStream: isSafari ? 'mjpeg' : 'h264' // Safari prefers MJPEG, others prefer H.264
+    });
+    
+    console.log(`🌐 Browser detected: Safari=${isSafari}, Chrome=${isChrome}, Firefox=${isFirefox}`);
+    console.log(`📹 Preferred stream: ${isSafari ? 'MJPEG' : 'H.264'}`);
+  }, []);
 
   useEffect(() => {
     // Initial fetch
@@ -646,28 +672,70 @@ function App() {
           <div className="video-container">
             {printerStatus?.is_running ? (
               <>
-                <video 
-                  src="/h264_stream" 
-                  autoPlay 
-                  muted 
-                  playsInline
-                  className="video-stream"
-                  style={{display: 'block'}}
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.nextSibling.style.display = 'block';
-                  }}
-                />
-                <img 
-                  src="/video_feed" 
-                  alt="3D Printer Camera Feed"
-                  className="video-stream"
-                  style={{display: 'none'}}
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.nextSibling.style.display = 'block';
-                  }}
-                />
+                {browserInfo.preferredStream === 'mjpeg' ? (
+                  <>
+                    {/* MJPEG stream - primary for Safari */}
+                    <img 
+                      src="/video_feed" 
+                      alt="3D Printer Camera Feed"
+                      className="video-stream"
+                      style={{display: 'block'}}
+                      onError={(e) => {
+                        console.log('MJPEG stream failed, trying H.264...');
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'block';
+                      }}
+                    />
+                    {/* H.264 stream - fallback */}
+                    <video 
+                      src="/h264_stream" 
+                      autoPlay 
+                      muted 
+                      playsInline
+                      className="video-stream"
+                      style={{display: 'none'}}
+                      onError={(e) => {
+                        console.log('H.264 stream failed, showing placeholder...');
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'block';
+                      }}
+                    />
+                  </>
+                ) : (
+                  <>
+                    {/* H.264 stream - primary for Chrome/Firefox */}
+                    <video 
+                      src="/h264_stream" 
+                      autoPlay 
+                      muted 
+                      playsInline
+                      className="video-stream"
+                      style={{display: 'block'}}
+                      onError={(e) => {
+                        console.log('H.264 stream failed, trying MJPEG...');
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'block';
+                      }}
+                    />
+                    {/* MJPEG stream - fallback */}
+                    <img 
+                      src="/video_feed" 
+                      alt="3D Printer Camera Feed"
+                      className="video-stream"
+                      style={{display: 'none'}}
+                      onError={(e) => {
+                        console.log('MJPEG stream failed, showing placeholder...');
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'block';
+                      }}
+                    />
+                  </>
+                )}
+                {/* Fallback placeholder */}
+                <div className="video-placeholder" style={{display: 'none'}}>
+                  <p>⚠️ Video streaming not supported in this browser</p>
+                  <p>Please try Chrome, Firefox, or Edge</p>
+                </div>
               </>
             ) : (
               <div className="video-placeholder">
