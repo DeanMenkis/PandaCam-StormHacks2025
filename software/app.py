@@ -11,6 +11,9 @@ import numpy as np
 import cv2
 import requests
 import re
+
+from prompt import PROMPT
+
 try:
     from picamera import PiCamera
     PICAMERA_AVAILABLE = True
@@ -357,21 +360,7 @@ class GeminiAIAnalyzer:
     def __init__(self, api_key, api_url):
         self.api_key = api_key
         self.api_url = api_url
-        self.prompt = """You are an expert 3D printing technician analyzing a camera feed. Look at this image and provide a clear, friendly analysis.
-
-🔍 WHAT TO LOOK FOR:
-• Is there a 3D printer visible in the image?
-• If yes: How does the print quality look? Any issues?
-• If no: What do you actually see instead?
-
-📝 RESPONSE FORMAT:
-Write a natural, conversational response. Start with one of these:
-• '✅ PRINT LOOKS GOOD: [explain why]'
-• '⚠️ POTENTIAL ISSUE: [describe the problem]'
-• '❌ PRINT FAILURE: [explain what went wrong]'
-• '🤷 NO PRINTER VISIBLE: [describe what you see instead]'
-
-Be helpful and specific. If you see a problem, suggest what might be causing it. Keep it under 3 sentences and use a friendly tone."""
+        self.prompt = PROMPT
     
     def analyze_frame(self, frame_data):
         """
@@ -606,12 +595,24 @@ Be helpful and specific. If you see a problem, suggest what might be causing it.
         # Fallback: analyze response text for positive/negative indicators
         text_upper = response_text.upper()
         
-        # Positive indicators
-        positive_words = ['GOOD', 'FINE', 'NORMAL', 'SUCCESSFUL', 'WELL', 'PERFECT', 'EXCELLENT', 'SMOOTH']
-        negative_words = ['PROBLEM', 'ISSUE', 'ERROR', 'FAILURE', 'FAILED', 'BAD', 'WRONG', 'BROKEN', 'STUCK']
+        # Positive indicators (including bed-related terms that should be considered normal)
+        positive_words = ['GOOD', 'FINE', 'NORMAL', 'SUCCESSFUL', 'WELL', 'PERFECT', 'EXCELLENT', 'SMOOTH', 'OKAY', 'ADHERING', 'BUILDING']
+        # Negative indicators (actual print problems, not bed cleanliness)
+        negative_words = ['WARPED', 'DETACHED', 'CLOGGED', 'FALLEN', 'SPAGHETTI', 'STRINGY', 'DEFORMED', 'CURLED', 'MOVING']
+        
+        # Don't consider bed-related issues as negative
+        bed_words = ['DIRTY', 'MESSY', 'RESIDUE', 'DEBRIS', 'DUST', 'REMNANTS', 'USED', 'WORN']
+        # If response mentions bed issues but no actual print problems, lean positive
+        has_bed_mentions = any(word in text_upper for word in bed_words)
+        has_print_problems = any(word in text_upper for word in negative_words)
         
         positive_count = sum(1 for word in positive_words if word in text_upper)
         negative_count = sum(1 for word in negative_words if word in text_upper)
+        
+        # Special case: if bed issues mentioned but no actual print problems, consider it good
+        if has_bed_mentions and not has_print_problems:
+            print(f"🛏️ Bed issues detected but no print problems - classifying as GOOD (1)")
+            return 1
         
         if positive_count > negative_count:
             return 1
@@ -624,7 +625,7 @@ Be helpful and specific. If you see a problem, suggest what might be causing it.
             elif response_text.startswith(('❌', '⚠️')):
                 return 0
             else:
-                return 0  # Conservative default
+                return 1  # Default to positive for ambiguous cases
 
 # Initialize AI analyzer
 ai_analyzer = GeminiAIAnalyzer(GEMINI_API_KEY, GEMINI_API_URL)
