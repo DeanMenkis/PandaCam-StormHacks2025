@@ -61,7 +61,7 @@ frame_lock = threading.Lock()
 
 # AI Monitoring configuration and state
 GEMINI_API_KEY = "AIzaSyBHIiKiXJNKW6Ot5ZuFT1S2CiajIyvRP_c"
-GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
+GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
 AI_MONITORING_INTERVAL = 10  # seconds
 
 # AI monitoring thread control
@@ -665,9 +665,44 @@ def get_printer_status():
     try:
         global printer_state
         printer_state["timestamp"] = datetime.now().isoformat()
+        
+        # Enhanced status with AI insights prominently displayed
+        enhanced_state = printer_state.copy()
+        
+        # Add AI status summary for easy frontend consumption
+        if printer_state.get("ai_monitoring_active", False):
+            ai_status_emoji = "🤖"
+            if printer_state.get("ai_response"):
+                if printer_state["ai_response"].startswith("✅"):
+                    ai_status_emoji = "✅"
+                elif printer_state["ai_response"].startswith("⚠️"):
+                    ai_status_emoji = "⚠️"
+                elif printer_state["ai_response"].startswith("❌"):
+                    ai_status_emoji = "❌"
+                elif printer_state["ai_response"].startswith("🤷"):
+                    ai_status_emoji = "🤷"
+            
+            enhanced_state["ai_status_summary"] = {
+                "active": True,
+                "emoji": ai_status_emoji,
+                "status": printer_state.get("print_status", "idle"),
+                "confidence": printer_state.get("ai_confidence", 0.0),
+                "last_analysis": printer_state.get("last_ai_analysis"),
+                "response": printer_state.get("ai_response", "No analysis yet")
+            }
+        else:
+            enhanced_state["ai_status_summary"] = {
+                "active": False,
+                "emoji": "🔴",
+                "status": "disabled",
+                "confidence": 0.0,
+                "last_analysis": None,
+                "response": "AI monitoring not active"
+            }
+        
         return jsonify({
             "success": True,
-            "data": printer_state,
+            "data": enhanced_state,
             "timestamp": datetime.now().isoformat()
         })
     except Exception as e:
