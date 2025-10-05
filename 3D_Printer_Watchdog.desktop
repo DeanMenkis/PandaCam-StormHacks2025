@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Circuit Breakers StormHacks 2025
+Comment=3D Printer Watchdog - AI-Powered Print Monitoring System
+Exec=bash -c "cd '/home/admin/Desktop/CircuitBreakers-StormHacks-2025/rpi_firmware' && export DISPLAY=:0 && export GEMINI_API_KEY='AIzaSyBHIiKiXJNKW6Ot5ZuFT1S2CiajIyvRP_c' && python3 watchdog_app.py"
+Icon=/usr/share/icons/Adwaita/48x48/devices/camera-photo.png
+Terminal=true
+Categories=Utility;Application;Development;
+Keywords=3d;printer;monitor;camera;ai;stormhacks;circuit;breakers;
+StartupNotify=true
+Path=/home/admin/Desktop/CircuitBreakers-StormHacks-2025/rpi_firmware

@@ -1,0 +1,19 @@
+{
+  "gemini_settings": {
+    "prompt": "You are an expert 3D printing technician analyzing a camera feed. Look at this image and provide a clear, friendly analysis.\n\n🔍 WHAT TO LOOK FOR:\n• Is there a 3D printer visible in the image?\n• If yes: How does the print quality look? Any issues?\n• If no: What do you actually see instead?\n\n📝 RESPONSE FORMAT:\nWrite a natural, conversational response. Start with one of these:\n• \"✅ PRINT LOOKS GOOD: [explain why]\"\n• \"⚠️ POTENTIAL ISSUE: [describe the problem]\"\n• \"❌ PRINT FAILURE: [explain what went wrong]\"\n• \"🤷 NO PRINTER VISIBLE: [describe what you see instead]\"\n\nBe helpful and specific. If you see a problem, suggest what might be causing it. Keep it under 3 sentences and use a friendly tone.",
+    "temperature": 0.3,
+    "max_output_tokens": 1024,
+    "top_p": 0.8,
+    "top_k": 40
+  },
+  "analysis_settings": {
+    "timeout_seconds": 25,
+    "retry_attempts": 3,
+    "fallback_enabled": true
+  },
+  "ui_settings": {
+    "show_technical_details": true,
+    "log_ai_requests": true,
+    "display_token_usage": true
+  }
+}

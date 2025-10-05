@@ -1,0 +1,654 @@
+
+==================================================
+3D Printer Watchdog started at 2025-10-04 23:23:14.816205
+==================================================
+[2025-10-04 23:23:27] INFO: Photo captured successfully
+
+==================================================
+3D Printer Watchdog started at 2025-10-04 23:27:03.640972
+==================================================
+
+==================================================
+3D Printer Watchdog started at 2025-10-04 23:28:38.422440
+==================================================
+[2025-10-04 23:28:59] INFO: Photo captured successfully
+[2025-10-04 23:29:15] INFO: Automatic monitoring started
+[2025-10-04 23:29:21] INFO: Photo captured successfully
+[2025-10-04 23:29:21] INFO: Sending image to AI for analysis...
+[2025-10-04 23:29:21] ERROR: AI Analysis failed: AI analysis error: Object of type bytes is not JSON serializable
+
+==================================================
+3D Printer Watchdog started at 2025-10-04 23:29:52.844962
+==================================================
+[2025-10-04 23:30:01] INFO: Automatic monitoring started
+[2025-10-04 23:30:07] INFO: Photo captured successfully
+[2025-10-04 23:30:07] INFO: Sending image to AI for analysis...
+[2025-10-04 23:30:08] ERROR: AI Analysis failed: API Error 404: Not Found
+[2025-10-04 23:30:37] INFO: Photo captured successfully
+[2025-10-04 23:30:37] INFO: Sending image to AI for analysis...
+[2025-10-04 23:30:38] ERROR: AI Analysis failed: API Error 404: Not Found
+
+==================================================
+3D Printer Watchdog started at 2025-10-04 23:30:47.724095
+==================================================
+
+==================================================
+3D Printer Watchdog started at 2025-10-04 23:33:52.074257
+==================================================
+[2025-10-04 23:33:53] INFO: Automatic monitoring started
+[2025-10-04 23:33:59] INFO: Photo captured successfully
+[2025-10-04 23:33:59] INFO: Sending image to AI for analysis...
+[2025-10-04 23:34:00] WARNING: Using mock AI response (API unavailable)
+[2025-10-04 23:34:00] INFO: AI Analysis: Viewing a 3D printing operation in progress. The layers look well-adhered and the print quality appears satisfactory.
+[2025-10-04 23:34:00] INFO: ✅ Print looks ok
+[2025-10-04 23:34:28] INFO: Photo captured successfully
+[2025-10-04 23:34:28] INFO: Sending image to AI for analysis...
+[2025-10-04 23:34:29] WARNING: Using mock AI response (API unavailable)
+[2025-10-04 23:34:29] INFO: AI Analysis: The image shows an active 3D printer. The filament flow appears normal and there are no signs of print failure or material issues.
+[2025-10-04 23:34:29] WARNING: ⚠️ Print may have failed!
+[2025-10-04 23:34:58] INFO: Photo captured successfully
+[2025-10-04 23:34:59] INFO: Sending image to AI for analysis...
+[2025-10-04 23:34:59] WARNING: Using mock AI response (API unavailable)
+[2025-10-04 23:34:59] INFO: AI Analysis: Viewing a 3D printing operation in progress. The layers look well-adhered and the print quality appears satisfactory.
+[2025-10-04 23:34:59] INFO: ✅ Print looks ok
+[2025-10-04 23:35:06] INFO: Automatic monitoring stopped
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 02:03:55.533775
+==================================================
+[2025-10-05 02:04:09] INFO: Photo captured successfully
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 02:04:59.103787
+==================================================
+[2025-10-05 02:05:05] INFO: Photo captured successfully
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 02:08:37.334154
+==================================================
+[2025-10-05 02:08:44] INFO: Photo captured successfully
+[2025-10-05 02:08:44] INFO: Analyzing image...
+[2025-10-05 02:08:44] WARNING: Using basic image analysis (AI API unavailable)
+[2025-10-05 02:08:44] INFO: AI Analysis: Image captured: 1456x1088 RGB image. Unable to determine content from basic analysis.
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 02:10:39.400982
+==================================================
+[2025-10-05 02:10:44] INFO: Photo captured successfully
+[2025-10-05 02:10:44] INFO: Analyzing image...
+[2025-10-05 02:10:44] WARNING: Using basic image analysis (AI API unavailable)
+[2025-10-05 02:10:44] INFO: AI Analysis: Image captured: 1456x1088 RGB image. Camera feed from 3D printer monitoring system.
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 02:17:46.346096
+==================================================
+[2025-10-05 02:17:50] INFO: Photo captured successfully
+[2025-10-05 02:17:50] INFO: Analyzing image with Google Gemini...
+[2025-10-05 02:17:55] INFO: AI Analysis: The image shows a person, likely a male, sitting
+[2025-10-05 02:20:15] INFO: Live preview started
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 02:23:50.894126
+==================================================
+[2025-10-05 02:24:03] INFO: 📸 Photo captured successfully - analyzing with AI...
+[2025-10-05 02:24:03] INFO: 🔄 Analyzing image with Google Gemini AI...
+[2025-10-05 02:24:08] WARNING: Unexpected Gemini API response structure
+[2025-10-05 02:24:08] WARNING: Using basic image analysis (Google Gemini API key not configured)
+[2025-10-05 02:24:08] INFO: 🤖 AI Analysis: 📷 Photo captured: 1456x1088 RGB image. 3D printer monitoring system active. Image analysis ready for print quality assessment.
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 02:27:54.217974
+==================================================
+[2025-10-05 02:27:54] INFO: 🚀 Starting 3D Printer Watchdog with live preview...
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 02:29:31.454992
+==================================================
+[2025-10-05 02:29:31] INFO: 🚀 Starting 3D Printer Watchdog with live preview...
+[2025-10-05 02:29:38] INFO: 🤖 AI-powered automatic monitoring started (live preview paused)
+[2025-10-05 02:29:39] INFO: 📸 Photo captured successfully - analyzing with AI...
+[2025-10-05 02:29:39] INFO: 🔄 Analyzing image with Google Gemini AI...
+[2025-10-05 02:29:43] WARNING: Unexpected Gemini API response structure: {'candidates': [{'content': {'role': 'model'}, 'finishReason': 'MAX_TOKENS', 'index': 0}], 'usageMetadata': {'promptTokenCount': 359, 'totalTokenCount': 858, 'promptTokensDetails': [{'modality': 'TEXT', 'tokenCount': 101}, {'modality': 'IMAGE', 'tokenCount': 258}], 'thoughtsTokenCount': 499}, 'modelVersion': 'gemini-2.5-flash', 'responseId': 'B8rhaKfCKpy0qtsPs_az8As'}
+[2025-10-05 02:29:44] INFO: ⏹️ AI monitoring stopped (live preview resumed)
+[2025-10-05 02:29:49] INFO: 📸 Photo captured successfully - analyzing with AI...
+[2025-10-05 02:29:49] INFO: 🔄 Analyzing image with Google Gemini AI...
+[2025-10-05 02:29:53] WARNING: Unexpected Gemini API response structure: {'candidates': [{'content': {'role': 'model'}, 'finishReason': 'MAX_TOKENS', 'index': 0}], 'usageMetadata': {'promptTokenCount': 359, 'totalTokenCount': 858, 'promptTokensDetails': [{'modality': 'TEXT', 'tokenCount': 101}, {'modality': 'IMAGE', 'tokenCount': 258}], 'thoughtsTokenCount': 499}, 'modelVersion': 'gemini-2.5-flash', 'responseId': 'EcrhaInLIYygz7IPkfje0Qo'}
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 02:35:13.994980
+==================================================
+[2025-10-05 02:35:14] INFO: 🚀 Starting 3D Printer Watchdog with live preview...
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 02:35:25.181484
+==================================================
+[2025-10-05 02:35:25] INFO: 🚀 Starting 3D Printer Watchdog with live preview...
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 02:36:57.573585
+==================================================
+[2025-10-05 02:36:57] INFO: 🚀 Starting 3D Printer Watchdog with live preview...
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 02:37:09.351043
+==================================================
+[2025-10-05 02:37:09] INFO: 🚀 Starting 3D Printer Watchdog with live preview...
+[2025-10-05 02:37:09] INFO: 👁️ Live camera preview thread started
+[2025-10-05 02:37:09] INFO: 📹 Preview worker started
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 02:37:43.024081
+==================================================
+[2025-10-05 02:37:43] INFO: 🚀 Starting 3D Printer Watchdog with live preview...
+[2025-10-05 02:37:43] INFO: 👁️ Live camera preview thread started
+[2025-10-05 02:37:43] INFO: 📹 Preview worker started
+[2025-10-05 02:37:52] INFO: 📹 Preview active - captured 10 frames
+[2025-10-05 02:38:02] INFO: 📸 Manual capture triggered - taking photo instantly...
+[2025-10-05 02:38:02] ERROR: Camera capture failed: [3:43:12.713644051] [33413] [1;32m INFO [1;37mCamera [1;34mcamera_manager.cpp:326 [0mlibcamera v0.5.1+100-e53bdf1f
+[3:43:12.766261931] [33419] [1;33m WARN [1;37mRPiSdn [1;34msdn.cpp:40 [0mUsing legacy SDN tuning - please consider moving SDN inside rpi.denoise
+[3:43:12.770158011] [33419] [1;32m INFO [1;37mRPI [1;34mvc4.cpp:440 [0mRegistered camera /base/soc/i2c0mux/i2c@1/imx296@1a to Unicam device /dev/media0 and ISP device /dev/media2
+[3:43:12.770304473] [33419] [1;32m INFO [1;37mRPI [1;34mpipeline_base.cpp:1107 [0mUsing configuration file '/usr/share/libcamera/pipeline/rpi/vc4/rpi_apps.yaml'
+[3:43:12.854593417] [33413] [1;32m INFO [1;37mCamera [1;34mcamera.cpp:1011 [0mPipeline handler in use by another process
+ERROR: *** failed to acquire camera /base/soc/i2c0mux/i2c@1/imx296@1a ***
+[2025-10-05 02:38:03] INFO: 📹 Preview active - captured 20 frames
+[2025-10-05 02:38:03] INFO: 🖼️ Preview display updated (20 total)
+[2025-10-05 02:38:13] INFO: 📹 Preview active - captured 30 frames
+[2025-10-05 02:38:23] INFO: 📹 Preview active - captured 40 frames
+[2025-10-05 02:38:23] INFO: 🖼️ Preview display updated (40 total)
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 02:40:23.313521
+==================================================
+[2025-10-05 02:40:23] INFO: 🚀 Starting 3D Printer Watchdog with live preview...
+[2025-10-05 02:40:23] INFO: 👁️ Live camera preview thread started
+[2025-10-05 02:40:23] INFO: 📹 Preview worker started
+[2025-10-05 02:40:30] INFO: 📸 Manual capture triggered - pausing preview and taking photo...
+[2025-10-05 02:40:30] INFO: ⏸️ Waiting for preview to pause...
+[2025-10-05 02:40:30] INFO: ⏸️ Preview paused for manual capture...
+[2025-10-05 02:40:30] INFO: 📸 Camera acquired, taking high-quality photo...
+[2025-10-05 02:40:32] INFO: 📸 High-quality photo captured successfully - analyzing with AI...
+[2025-10-05 02:40:32] INFO: ▶️ Resuming live preview...
+[2025-10-05 02:40:32] INFO: 🔄 Analyzing image with Google Gemini AI...
+[2025-10-05 02:40:32] INFO: ▶️ Preview resumed
+[2025-10-05 02:40:35] INFO: 📹 Preview active - captured 10 frames
+[2025-10-05 02:40:37] WARNING: ⚠️ Gemini response was truncated due to token limit
+[2025-10-05 02:40:37] INFO: 🤖 AI Analysis: AI analysis completed but response content was incomplete. The image was processed successfully. Response was truncated due to length limits.
+[2025-10-05 02:40:45] INFO: 📹 Preview active - captured 20 frames
+[2025-10-05 02:40:45] INFO: 🖼️ Preview display updated (20 total)
+[2025-10-05 02:40:55] INFO: 📹 Preview active - captured 30 frames
+[2025-10-05 02:41:05] INFO: 📹 Preview active - captured 40 frames
+[2025-10-05 02:41:05] INFO: 🖼️ Preview display updated (40 total)
+[2025-10-05 02:41:15] INFO: 📹 Preview active - captured 50 frames
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 02:43:22.964257
+==================================================
+[2025-10-05 02:43:23] INFO: 🚀 Starting 3D Printer Watchdog with live preview...
+[2025-10-05 02:43:23] INFO: 👁️ Live camera preview thread started
+[2025-10-05 02:43:23] INFO: 📹 Preview worker started
+[2025-10-05 02:43:42] INFO: 📸 Manual capture started
+[2025-10-05 02:43:44] INFO: 📸 Photo captured - analyzing...
+[2025-10-05 02:43:49] WARNING: ⚠️ Gemini response was truncated due to token limit
+[2025-10-05 02:43:49] INFO: ✅ AI analysis completed
+[2025-10-05 02:44:15] INFO: 📹 Preview: 50 frames captured
+[2025-10-05 02:45:05] INFO: 📹 Preview: 100 frames captured
+[2025-10-05 02:45:05] INFO: 🖼️ Display: 100 frames shown
+[2025-10-05 02:45:55] INFO: 📹 Preview: 150 frames captured
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 02:46:28.174322
+==================================================
+[2025-10-05 02:46:28] INFO: 🚀 Starting 3D Printer Watchdog with live preview...
+[2025-10-05 02:46:28] INFO: 👁️ Live camera preview thread started
+[2025-10-05 02:46:28] INFO: 📹 Preview worker started
+[2025-10-05 02:46:35] INFO: 📸 Manual capture started
+[2025-10-05 02:46:38] INFO: 📸 Photo captured - analyzing...
+[2025-10-05 02:46:40] WARNING: ⚠️ Gemini response was truncated due to token limit
+[2025-10-05 02:46:40] INFO: ✅ AI analysis completed
+[2025-10-05 02:47:20] INFO: 📹 Preview: 50 frames captured
+[2025-10-05 02:48:10] INFO: 📹 Preview: 100 frames captured
+[2025-10-05 02:48:10] INFO: 🖼️ Display: 100 frames shown
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 02:50:08.239228
+==================================================
+[2025-10-05 02:50:08] INFO: 🚀 Starting 3D Printer Watchdog with live preview...
+[2025-10-05 02:50:08] INFO: 👁️ Live camera preview thread started
+[2025-10-05 02:50:08] INFO: 📹 Preview worker started
+[2025-10-05 02:50:21] INFO: 📸 Manual capture started
+[2025-10-05 02:50:23] INFO: 📸 Photo captured - analyzing...
+[2025-10-05 02:50:26] WARNING: ⚠️ Gemini response was truncated due to token limit
+[2025-10-05 02:50:26] INFO: ✅ AI analysis completed
+[2025-10-05 02:50:49] INFO: 📸 Manual capture started
+[2025-10-05 02:50:51] INFO: 📸 Photo captured - analyzing...
+[2025-10-05 02:50:55] WARNING: ⚠️ Gemini response was truncated due to token limit
+[2025-10-05 02:50:55] INFO: ✅ AI analysis completed
+[2025-10-05 02:51:01] INFO: 📹 Preview: 50 frames captured
+[2025-10-05 02:51:51] INFO: 📹 Preview: 100 frames captured
+[2025-10-05 02:51:52] INFO: 🖼️ Display: 100 frames shown
+[2025-10-05 02:52:40] INFO: 📹 Preview: 150 frames captured
+[2025-10-05 02:53:30] INFO: 📹 Preview: 200 frames captured
+[2025-10-05 02:53:30] INFO: 🖼️ Display: 200 frames shown
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 02:54:17.422299
+==================================================
+[2025-10-05 02:54:17] INFO: 🚀 Starting 3D Printer Watchdog with live preview...
+[2025-10-05 02:54:17] INFO: 👁️ Live camera preview thread started
+[2025-10-05 02:54:17] INFO: 📹 Preview worker started
+[2025-10-05 02:55:07] INFO: 📹 Preview: 50 frames captured
+[2025-10-05 02:55:56] INFO: 📹 Preview: 100 frames captured
+[2025-10-05 02:55:57] INFO: 🖼️ Display: 100 frames shown
+[2025-10-05 02:56:46] INFO: 📹 Preview: 150 frames captured
+[2025-10-05 02:57:35] INFO: 📹 Preview: 200 frames captured
+[2025-10-05 02:57:36] INFO: 🖼️ Display: 200 frames shown
+[2025-10-05 02:58:44] INFO: ✅ Loaded AI configuration from ai_config.json
+[2025-10-05 02:58:44] ERROR: ❌ Error loading AI config: 'PrinterWatchdogApp' object has no attribute 'log_queue', using defaults
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 02:59:13.586553
+==================================================
+[2025-10-05 02:59:13] INFO: ✅ Loaded AI configuration from ai_config.json
+[2025-10-05 02:59:13] INFO: 🚀 Starting 3D Printer Watchdog with live preview...
+[2025-10-05 02:59:13] INFO: 👁️ Live camera preview thread started
+[2025-10-05 02:59:13] INFO: 📹 Preview worker started
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 02:59:21.170516
+==================================================
+[2025-10-05 02:59:21] INFO: ✅ Loaded AI configuration from ai_config.json
+[2025-10-05 02:59:21] INFO: 🚀 Starting 3D Printer Watchdog with live preview...
+[2025-10-05 02:59:21] INFO: 👁️ Live camera preview thread started
+[2025-10-05 02:59:21] INFO: 📹 Preview worker started
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 03:00:21.170047
+==================================================
+[2025-10-05 03:00:21] INFO: ✅ Loaded AI configuration from ai_config.json
+[2025-10-05 03:00:21] INFO: 🚀 Starting 3D Printer Watchdog with live preview...
+[2025-10-05 03:00:21] INFO: 👁️ Live camera preview thread started
+[2025-10-05 03:00:21] INFO: 📹 Preview worker started
+[2025-10-05 03:01:11] INFO: 📹 Preview: 50 frames captured
+[2025-10-05 03:02:00] INFO: 📹 Preview: 100 frames captured
+[2025-10-05 03:02:01] INFO: 🖼️ Display: 100 frames shown
+[2025-10-05 03:02:09] INFO: ⚠️ Preview capture failed: returncode=255, stdout_size=0
+[2025-10-05 03:02:09] INFO: ⚠️ Preview capture failed: returncode=255, stdout_size=0
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 03:02:09.872307
+==================================================
+[2025-10-05 03:02:09] INFO: ✅ Loaded AI configuration from ai_config.json
+[2025-10-05 03:02:09] INFO: 🚀 Starting 3D Printer Watchdog with live preview...
+[2025-10-05 03:02:09] INFO: 👁️ Live camera preview thread started
+[2025-10-05 03:02:09] INFO: 📹 Preview worker started
+[2025-10-05 03:02:10] INFO: ⚠️ Preview capture failed: returncode=255, stdout_size=0
+[2025-10-05 03:02:11] INFO: ⚠️ Preview capture failed: returncode=255, stdout_size=0
+[2025-10-05 03:02:11] INFO: ⚠️ Preview capture failed: returncode=255, stdout_size=0
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 03:02:28.320169
+==================================================
+[2025-10-05 03:02:28] INFO: ✅ Loaded AI configuration from ai_config.json
+[2025-10-05 03:02:28] INFO: 🚀 Starting 3D Printer Watchdog with live preview...
+[2025-10-05 03:02:28] INFO: 👁️ Live camera preview thread started
+[2025-10-05 03:02:28] INFO: 📹 Preview worker started
+[2025-10-05 03:03:07] INFO: 📸 Manual capture started
+[2025-10-05 03:03:10] INFO: 📸 Photo captured - analyzing...
+[2025-10-05 03:03:12] WARNING: ⚠️ Gemini response was truncated due to token limit
+[2025-10-05 03:03:12] WARNING: Unexpected Gemini API response structure: {'candidates': [{'content': {'role': 'model'}, 'finishReason': 'MAX_TOKENS', 'index': 0}], 'usageMetadata': {'promptTokenCount': 343, 'totalTokenCount': 492, 'promptTokensDetails': [{'modality': 'TEXT', 'tokenCount': 85}, {'modality': 'IMAGE', 'tokenCount': 258}], 'thoughtsTokenCount': 149}, 'modelVersion': 'gemini-2.5-flash', 'responseId': '4NHhaOPsJs3Pz7IPiPGR4As'}
+[2025-10-05 03:03:20] INFO: 📹 Preview: 50 frames captured
+[2025-10-05 03:04:10] INFO: 📹 Preview: 100 frames captured
+[2025-10-05 03:04:10] INFO: 🖼️ Display: 100 frames shown
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 03:04:37.164405
+==================================================
+[2025-10-05 03:04:37] INFO: ✅ Loaded AI configuration from ai_config.json
+[2025-10-05 03:04:37] INFO: 🚀 Starting 3D Printer Watchdog with live preview...
+[2025-10-05 03:04:37] INFO: 👁️ Live camera preview thread started
+[2025-10-05 03:04:37] INFO: 📹 Preview worker started
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 03:16:39.371283
+==================================================
+[2025-10-05 03:16:39] INFO: ✅ Loaded AI configuration from ai_config.json
+[2025-10-05 03:16:39] INFO: 🚀 Starting 3D Printer Watchdog with live preview...
+[2025-10-05 03:16:39] INFO: 👁️ Live camera preview thread started
+[2025-10-05 03:16:39] INFO: 📹 Preview worker started
+[2025-10-05 03:17:29] INFO: 📹 Preview: 50 frames captured
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 03:26:43.576308
+==================================================
+[2025-10-05 03:26:43] INFO: ✅ Loaded AI configuration from ai_config.json
+[2025-10-05 03:26:43] INFO: 🚀 Starting 3D Printer Watchdog with live preview...
+[2025-10-05 03:26:43] INFO: 👁️ Live camera preview thread started
+[2025-10-05 03:26:43] INFO: 📹 Preview worker started
+[2025-10-05 03:26:43] INFO: ⚠️ Camera disabled - running in demo mode
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 03:29:52.831926
+==================================================
+[2025-10-05 03:29:52] INFO: ✅ Loaded AI configuration from ai_config.json
+[2025-10-05 03:29:52] INFO: 🚀 Starting 3D Printer Watchdog with live preview...
+[2025-10-05 03:29:52] INFO: 📹 Preview worker started
+[2025-10-05 03:29:52] INFO: 👁️ Live camera preview thread started
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 03:38:54.858469
+==================================================
+[2025-10-05 03:38:54] INFO: ✅ Loaded AI configuration from ai_config.json
+[2025-10-05 03:38:54] INFO: 🚀 Starting 3D Printer Watchdog with live preview...
+[2025-10-05 03:38:54] INFO: 👁️ Live camera preview thread started
+[2025-10-05 03:38:54] INFO: 📹 Preview worker started
+[2025-10-05 03:38:56] INFO: ⚠️ Preview capture timed out
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 03:44:10.157981
+==================================================
+[2025-10-05 03:44:10] INFO: ✅ Loaded AI configuration from ai_config.json
+[2025-10-05 03:44:10] INFO: 🚀 Starting 3D Printer Watchdog with live preview...
+[2025-10-05 03:44:10] INFO: 👁️ Live camera preview thread started
+[2025-10-05 03:44:10] INFO: 📹 Preview worker started
+[2025-10-05 03:44:11] INFO: ⚠️ Preview capture timed out
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 03:46:52.361973
+==================================================
+[2025-10-05 03:46:52] INFO: ✅ Loaded AI configuration from ai_config.json
+[2025-10-05 03:46:52] INFO: 🚀 Starting 3D Printer Watchdog with live preview...
+[2025-10-05 03:46:52] INFO: 👁️ Live camera preview thread started
+[2025-10-05 03:46:52] INFO: 📹 Preview worker started
+[2025-10-05 03:46:53] INFO: ⚠️ Preview capture timed out
+[2025-10-05 03:47:43] INFO: 📹 Preview: 50 frames captured
+[2025-10-05 03:48:32] INFO: 📹 Preview: 100 frames captured
+[2025-10-05 03:48:32] INFO: 🖼️ Display: 100 frames shown
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 03:48:49.968099
+==================================================
+[2025-10-05 03:48:49] INFO: ✅ Loaded AI configuration from ai_config.json
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 03:48:53.564313
+==================================================
+[2025-10-05 03:48:53] INFO: ✅ Loaded AI configuration from ai_config.json
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 03:49:21.136327
+==================================================
+[2025-10-05 03:49:21] INFO: ✅ Loaded AI configuration from ai_config.json
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 03:49:34.688378
+==================================================
+[2025-10-05 03:49:34] INFO: ✅ Loaded AI configuration from ai_config.json
+[2025-10-05 03:49:34] INFO: 🚀 Starting 3D Printer Watchdog with live preview...
+[2025-10-05 03:49:34] INFO: 👁️ Live camera preview thread started
+[2025-10-05 03:49:34] INFO: 📹 Preview worker started
+[2025-10-05 03:49:35] INFO: ⚠️ Preview capture timed out
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 03:50:02.267166
+==================================================
+[2025-10-05 03:50:02] INFO: ✅ Loaded AI configuration from ai_config.json
+[2025-10-05 03:50:02] INFO: 🚀 Starting 3D Printer Watchdog with live preview...
+[2025-10-05 03:50:02] INFO: 📹 Preview worker started
+[2025-10-05 03:50:02] INFO: 👁️ Live camera preview thread started
+[2025-10-05 03:50:03] INFO: ⚠️ Preview capture timed out
+[2025-10-05 03:50:53] INFO: 📹 Preview: 50 frames captured
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 03:51:10.320616
+==================================================
+[2025-10-05 03:51:10] INFO: ✅ Loaded AI configuration from ai_config.json
+[2025-10-05 03:51:10] INFO: 🚀 Starting 3D Printer Watchdog with live preview...
+[2025-10-05 03:51:10] INFO: 👁️ Live camera preview thread started
+[2025-10-05 03:51:10] INFO: 📹 Preview worker started
+[2025-10-05 03:51:11] INFO: ⚠️ Preview capture failed: returncode=255, stdout_size=0
+[2025-10-05 03:51:11] INFO: ⚠️ Preview capture failed: returncode=255, stdout_size=0
+[2025-10-05 03:51:12] INFO: ⚠️ Preview capture failed: returncode=255, stdout_size=0
+[2025-10-05 03:51:13] INFO: ⚠️ Preview capture failed: returncode=255, stdout_size=0
+[2025-10-05 03:51:13] INFO: ⚠️ Preview capture failed: returncode=255, stdout_size=0
+[2025-10-05 03:51:13] INFO: ⚠️ Preview capture failed: returncode=255, stdout_size=0
+[2025-10-05 03:51:14] INFO: ⚠️ Preview capture failed: returncode=255, stdout_size=0
+[2025-10-05 03:51:14] INFO: ⚠️ Preview capture failed: returncode=-6, stdout_size=0
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 03:51:38.010645
+==================================================
+[2025-10-05 03:51:38] INFO: ✅ Loaded AI configuration from ai_config.json
+[2025-10-05 03:51:38] INFO: 🚀 Starting 3D Printer Watchdog with live preview...
+[2025-10-05 03:51:38] INFO: 👁️ Live camera preview thread started
+[2025-10-05 03:51:38] INFO: 📹 Preview worker started
+[2025-10-05 03:51:39] INFO: ⚠️ Preview capture timed out
+[2025-10-05 03:51:49] INFO: 📸 Manual capture started
+[2025-10-05 03:51:52] INFO: 📸 Photo captured - analyzing...
+[2025-10-05 03:51:54] WARNING: ⚠️ Gemini response was truncated due to token limit
+[2025-10-05 03:51:54] WARNING: Unexpected Gemini API response structure: {'candidates': [{'content': {'role': 'model'}, 'finishReason': 'MAX_TOKENS', 'index': 0}], 'usageMetadata': {'promptTokenCount': 343, 'totalTokenCount': 492, 'promptTokensDetails': [{'modality': 'TEXT', 'tokenCount': 85}, {'modality': 'IMAGE', 'tokenCount': 258}], 'thoughtsTokenCount': 149}, 'modelVersion': 'gemini-2.5-flash', 'responseId': 'St3haMaSKcTUz7IPs6vb4AU'}
+[2025-10-05 03:52:32] INFO: 📹 Preview: 50 frames captured
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 03:53:20.554162
+==================================================
+[2025-10-05 03:53:20] INFO: ✅ Loaded AI configuration from ai_config.json
+[2025-10-05 03:53:20] INFO: 🚀 Starting 3D Printer Watchdog with live preview...
+[2025-10-05 03:53:20] INFO: 👁️ Live camera preview thread started
+[2025-10-05 03:53:20] INFO: 📹 Preview worker started
+[2025-10-05 03:53:21] INFO: ⚠️ Preview capture timed out
+[2025-10-05 03:53:33] INFO: 📸 Manual capture started
+[2025-10-05 03:53:36] INFO: 📸 Photo captured - analyzing...
+[2025-10-05 03:53:40] INFO: 🔍 Full Gemini API response: {'candidates': [{'content': {'parts': [{'text': '```json\n{\n  "status": "FAIL",\n  "reason": "No 3D printer or print is visible in the image. The image appears to show a person\'s head and an indoor ceiling.",\n  "confidence": 100\n}\n```'}], 'role': 'model'}, 'finishReason': 'STOP', 'index': 0}], 'usageMetadata': {'promptTokenCount': 458, 'candidatesTokenCount': 59, 'totalTokenCount': 680, 'promptTokensDetails': [{'modality': 'TEXT', 'tokenCount': 200}, {'modality': 'IMAGE', 'tokenCount': 258}], 'thoughtsTokenCount': 163}, 'modelVersion': 'gemini-2.5-flash', 'responseId': 'tN3haMrpEJimqtsPtPPxqAI'}
+[2025-10-05 03:53:40] INFO: ✅ AI analysis completed
+[2025-10-05 03:54:13] INFO: 📹 Preview: 50 frames captured
+[2025-10-05 03:55:03] INFO: 📹 Preview: 100 frames captured
+[2025-10-05 03:55:03] INFO: 🖼️ Display: 100 frames shown
+[2025-10-05 03:55:53] INFO: 📹 Preview: 150 frames captured
+
+==================================================
+3D Printer Watchdog started at 2025-10-05 03:56:27.530526
+==================================================
+[2025-10-05 03:56:27] INFO: ✅ Loaded AI configuration from ai_config.json
+[2025-10-05 03:56:27] INFO: 🚀 Starting 3D Printer Watchdog with live preview...
+[2025-10-05 03:56:27] INFO: 👁️ Live camera preview thread started
+[2025-10-05 03:56:27] INFO: 📹 Preview worker started
+[2025-10-05 03:56:28] INFO: ⚠️ Preview capture failed: returncode=255, stdout_size=0
+[2025-10-05 03:56:28] INFO: ⚠️ Preview capture failed: returncode=255, stdout_size=0
+[2025-10-05 03:56:29] INFO: ⚠️ Preview capture failed: returncode=255, stdout_size=0
+[2025-10-05 03:56:29] INFO: ⚠️ Preview capture failed: returncode=255, stdout_size=0
+[2025-10-05 03:56:30] INFO: ⚠️ Preview capture failed: returncode=255, stdout_size=0
+[2025-10-05 03:56:30] INFO: ⚠️ Preview capture failed: returncode=255, stdout_size=0
+[2025-10-05 03:56:30] INFO: ⚠️ Preview capture failed: returncode=255, stdout_size=0
+[2025-10-05 03:56:31] INFO: ⚠️ Preview capture failed: returncode=255, stdout_size=0
+[2025-10-05 03:56:31] INFO: ⚠️ Preview capture failed: returncode=255, stdout_size=0
+[2025-10-05 03:56:45] INFO: 📹 Preview: 200 frames captured
+[2025-10-05 03:56:45] INFO: 🖼️ Display: 200 frames shown
+[2025-10-05 03:57:34] INFO: 📹 Preview: 250 frames captured
+[2025-10-05 03:58:24] INFO: 📹 Preview: 300 frames captured
+[2025-10-05 03:58:24] INFO: 🖼️ Display: 300 frames shown
+[2025-10-05 03:59:13] INFO: 📹 Preview: 350 frames captured
+[2025-10-05 04:00:03] INFO: 📹 Preview: 400 frames captured
+[2025-10-05 04:00:03] INFO: 🖼️ Display: 400 frames shown
+[2025-10-05 04:00:52] INFO: 📹 Preview: 450 frames captured
+[2025-10-05 04:01:41] INFO: 📹 Preview: 500 frames captured
+[2025-10-05 04:01:41] INFO: 🖼️ Display: 500 frames shown
+
+==================================================
+Session started: 2025-10-05 04:01:59
+==================================================
+[04:01:59] ✅ AI configuration loaded from ai_config.json
+[04:02:00] 📹 Starting live camera preview...
+[04:02:00] 📹 Preview worker started
+[04:02:00] 🚀 Modern 3D Printer Watchdog started successfully!
+[2025-10-05 04:02:01] INFO: ⚠️ Preview capture failed: returncode=255, stdout_size=0
+[2025-10-05 04:02:01] INFO: ⚠️ Preview capture failed: returncode=-6, stdout_size=0
+[04:02:02] ⚠️ Preview capture failed: returncode=255
+[04:02:02] ⚠️ Preview capture failed: returncode=-6
+[04:02:03] ⚠️ Preview capture failed: returncode=255
+[2025-10-05 04:02:04] INFO: ⚠️ Preview capture failed: returncode=255, stdout_size=0
+[04:02:05] ⚠️ Preview capture failed: returncode=255
+[2025-10-05 04:02:05] INFO: ⚠️ Preview capture failed: returncode=255, stdout_size=0
+[2025-10-05 04:02:06] INFO: ⚠️ Preview capture failed: returncode=255, stdout_size=0
+
+==================================================
+Session started: 2025-10-05 04:02:36
+==================================================
+[04:02:36] ✅ AI configuration loaded from ai_config.json
+[04:02:37] 📹 Starting live camera preview...
+[04:02:37] 📹 Preview worker started
+[04:02:37] 🚀 Modern 3D Printer Watchdog started successfully!
+
+==================================================
+Session started: 2025-10-05 04:08:06
+==================================================
+[04:08:06] ✅ AI configuration loaded from ai_config.json
+[04:08:07] 📹 Starting live camera preview...
+[04:08:07] 📹 Preview worker started
+[04:08:07] 🚀 Modern 3D Printer Watchdog started successfully!
+[04:09:01] 📹 Preview: 50 frames captured
+[04:09:12] 📸 Manual photo capture initiated...
+[04:09:14] 📸 Photo captured - analyzing...
+[04:09:17] 🔍 Full Gemini API response: {'candidates': [{'content': {'parts': [{'text': "🤷 NO PRINTER VISIBLE: It looks like we're getting a unique perspective here! I see a person's head, upside down, with a ceiling and some room fixtures in the background, but no 3D printer or print in sight. Perhaps the camera got bumped!"}], 'role': 'model'}, 'finishReason': 'STOP', 'index': 0}], 'usageMetadata': {'promptTokenCount': 438, 'candidatesTokenCount': 58, 'totalTokenCount': 765, 'promptTokensDetails': [{'modality': 'TEXT', 'tokenCount': 180}, {'modality': 'IMAGE', 'tokenCount': 258}], 'thoughtsTokenCount': 269}, 'modelVersion': 'gemini-2.5-flash', 'responseId': 'XeHhaNqJL9KymtkPvLqVyQ0'}
+[04:09:17] ✅ AI analysis completed
+[04:09:54] 📹 Preview: 100 frames captured
+[04:10:47] 📹 Preview: 150 frames captured
+[04:11:07] 📸 Manual photo capture initiated...
+[04:11:09] 📸 Photo captured - analyzing...
+
+==================================================
+Session started: 2025-10-05 04:11:10
+==================================================
+[04:11:10] ✅ AI configuration loaded from ai_config.json
+[04:11:11] 📹 Starting live camera preview...
+[04:11:11] 📹 Preview worker started
+[04:11:11] 🚀 Modern 3D Printer Watchdog started successfully!
+[04:11:12] ⚠️ Preview capture failed: returncode=255
+[04:11:13] ⚠️ Preview capture failed: returncode=-6
+[04:11:13] ⚠️ Preview capture failed: returncode=255
+[04:11:14] 🔍 Full Gemini API response: {'candidates': [{'content': {'parts': [{'text': '❌ PRINT FAILURE: Oh no, it looks like a classic case of "spaghetti" on your print bed! This usually happens when the print loses adhesion or there\'s an extrusion issue, causing the filament to print in mid-air. I\'d suggest checking your bed leveling, adhesion settings, and ensuring your nozzle isn\'t clogged for the next attempt.'}], 'role': 'model'}, 'finishReason': 'STOP', 'index': 0}], 'usageMetadata': {'promptTokenCount': 438, 'candidatesTokenCount': 74, 'totalTokenCount': 1013, 'promptTokensDetails': [{'modality': 'TEXT', 'tokenCount': 180}, {'modality': 'IMAGE', 'tokenCount': 258}], 'thoughtsTokenCount': 501}, 'modelVersion': 'gemini-2.5-flash', 'responseId': '0uHhaNmIIqDUz7IPqfCiIA'}
+[04:11:14] ✅ AI analysis completed
+[04:11:34] 👋 Shutting down 3D Printer Watchdog...
+
+==================================================
+Session started: 2025-10-05 04:11:39
+==================================================
+[04:11:39] ✅ AI configuration loaded from ai_config.json
+[04:11:40] 📹 Starting live camera preview...
+[04:11:40] 📹 Preview worker started
+[04:11:40] 🚀 Modern 3D Printer Watchdog started successfully!
+[04:12:34] 📹 Preview: 50 frames captured
+
+==================================================
+Session started: 2025-10-05 04:12:56
+==================================================
+[04:12:56] ✅ AI configuration loaded from ai_config.json
+[04:12:56] 📹 Starting live camera preview...
+[04:12:56] 📹 Preview worker started
+[04:12:56] 🚀 Modern 3D Printer Watchdog started successfully!
+[04:12:58] ⚠️ Preview capture failed: returncode=255
+[04:12:59] ⚠️ Preview capture failed: returncode=255
+[04:13:00] ⚠️ Preview capture failed: returncode=255
+[04:13:27] 👋 Shutting down 3D Printer Watchdog...
+
+==================================================
+Session started: 2025-10-05 04:13:32
+==================================================
+[04:13:32] ✅ AI configuration loaded from ai_config.json
+[04:13:33] 📹 Starting live camera preview...
+[04:13:33] 📹 Preview worker started
+[04:13:33] 🚀 Modern 3D Printer Watchdog started successfully!
+[04:14:26] 📹 Preview: 50 frames captured
+
+==================================================
+Session started: 2025-10-05 04:15:05
+==================================================
+[04:15:05] ✅ AI configuration loaded from ai_config.json
+[04:15:06] 📹 Starting live camera preview...
+[04:15:06] 📹 Preview worker started
+[04:15:06] 🚀 Modern 3D Printer Watchdog started successfully!
+[04:15:07] ⚠️ Preview capture failed: returncode=255
+[04:15:08] ⚠️ Preview capture failed: returncode=255
+[04:15:09] ⚠️ Preview capture failed: returncode=255
+[04:15:19] 📹 Preview: 100 frames captured
+[04:16:12] 📹 Preview: 150 frames captured
+
+==================================================
+Session started: 2025-10-05 04:16:24
+==================================================
+[04:16:24] ✅ AI configuration loaded from ai_config.json
+[04:16:25] 📹 Starting live camera preview...
+[04:16:25] 📹 Preview worker started
+[04:16:25] 🚀 Modern 3D Printer Watchdog started successfully!
+[04:16:26] ⚠️ Preview capture failed: returncode=255
+[04:16:27] ⚠️ Preview capture failed: returncode=255
+[04:16:28] ⚠️ Preview capture failed: returncode=255
+[04:16:53] ⚠️ Preview capture failed: returncode=255
+[04:17:06] 📹 Preview: 200 frames captured
+
+==================================================
+Session started: 2025-10-05 04:17:41
+==================================================
+[04:17:41] ✅ AI configuration loaded from ai_config.json
+[04:17:42] 📹 Starting live camera preview...
+[04:17:42] 📹 Preview worker started
+[04:17:42] 🚀 Modern 3D Printer Watchdog started successfully!
+
+==================================================
+Session started: 2025-10-05 04:18:36
+==================================================
+[04:18:36] ✅ AI configuration loaded from ai_config.json
+[04:18:37] 📹 Starting live camera preview...
+[04:18:37] 📹 Preview worker started
+[04:18:37] 🚀 Modern 3D Printer Watchdog started successfully!
+[04:19:29] 📹 Preview: 50 frames captured
+[04:20:21] 📹 Preview: 100 frames captured
+[04:21:14] 📹 Preview: 150 frames captured
+
+==================================================
+Session started: 2025-10-05 04:21:49
+==================================================
+[04:21:49] ✅ AI configuration loaded from ai_config.json
+[04:21:50] 📹 Starting live camera preview...
+[04:21:50] 📹 Preview worker started
+[04:21:50] 🚀 Modern 3D Printer Watchdog started successfully!
+[04:21:52] ⚠️ Preview capture failed: returncode=255
+[04:21:52] ⚠️ Preview capture failed: returncode=255
+[04:21:53] ⚠️ Preview capture failed: returncode=255
+[04:22:06] 👋 Shutting down 3D Printer Watchdog...
+
+==================================================
+Session started: 2025-10-05 04:22:11
+==================================================
+[04:22:11] ✅ AI configuration loaded from ai_config.json
+[04:22:12] 📹 Starting live camera preview...
+[04:22:12] 📹 Preview worker started
+[04:22:12] 🚀 Modern 3D Printer Watchdog started successfully!
+[04:23:01] 📸 Manual photo capture initiated...
+[04:23:03] 📸 Photo captured - analyzing...
+[04:23:07] 🔍 Full Gemini API response: {'candidates': [{'content': {'parts': [{'text': '🤷 NO PRINTER VISIBLE: I don\'t see a physical 3D printer in this camera feed. Instead, I see a hand holding a phone that\'s displaying an image of what looks like "3D printer spaghetti" from a gallery, alongside a computer monitor with some code. It seems you\'re looking at examples of prints rather than a live one!'}], 'role': 'model'}, 'finishReason': 'STOP', 'index': 0}], 'usageMetadata': {'promptTokenCount': 438, 'candidatesTokenCount': 76, 'totalTokenCount': 897, 'promptTokensDetails': [{'modality': 'TEXT', 'tokenCount': 180}, {'modality': 'IMAGE', 'tokenCount': 258}], 'thoughtsTokenCount': 383}, 'modelVersion': 'gemini-2.5-flash', 'responseId': 'm-ThaIbNMsSeqtsP49GToQE'}
+[04:23:07] ✅ AI analysis completed
+[04:23:08] 📹 Preview: 50 frames captured
+
+==================================================
+Session started: 2025-10-05 04:23:38
+==================================================
+[04:23:38] ✅ AI configuration loaded from ai_config.json
+[04:23:39] 📹 Starting live camera preview...
+[04:23:39] 📹 Preview worker started
+[04:23:39] 🚀 Modern 3D Printer Watchdog started successfully!
+[04:23:41] ⚠️ Preview capture failed: returncode=255
+[04:23:42] ⚠️ Preview capture failed: returncode=255
+[04:24:01] 📹 Preview: 100 frames captured
+[04:24:53] 📹 Preview: 150 frames captured
+[04:25:46] 📹 Preview: 200 frames captured
+[04:26:38] 📹 Preview: 250 frames captured
+[04:27:29] 📹 Preview: 300 frames captured
+[04:27:43] 👋 Shutting down 3D Printer Watchdog...
+
+==================================================
+Session started: 2025-10-05 04:27:49
+==================================================
+[04:27:49] ✅ AI configuration loaded from ai_config.json
+[04:27:50] 📹 Starting live camera preview...
+[04:27:50] 📹 Preview worker started
+[04:27:50] 🚀 Modern 3D Printer Watchdog started successfully!
