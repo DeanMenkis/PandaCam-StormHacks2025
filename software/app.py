@@ -156,12 +156,13 @@ class CameraManager:
             self.camera = Picamera2()
             
             # Create a more compatible configuration with better white balance
+            # Back to RGB888 format - we'll handle conversion properly
             config = self.camera.create_video_configuration(
                 main={"size": (640, 480), "format": "RGB888"},
                 controls={
                     "FrameRate": 15,
                     "AwbEnable": True,  # Enable auto white balance
-                    "AwbMode": 0,  # Auto white balance mode (0 = auto)
+                    "AwbMode": 1,  # Auto white balance mode
                     "Brightness": 0.0,  # Neutral brightness
                     "Contrast": 1.0,  # Normal contrast
                     "Saturation": 1.0,  # Normal saturation
@@ -174,12 +175,12 @@ class CameraManager:
             
             # Set additional controls after starting
             try:
-                # Force auto white balance to recalibrate
+                # Force auto white balance for natural colors
                 self.camera.set_controls({
                     "AwbEnable": True,
-                    "AwbMode": 0,  # Try different modes: 0=auto, 1=incandescent, 2=tungsten, 3=fluorescent, 4=indoor, 5=daylight, 6=cloudy
+                    "AwbMode": 1,  # Auto white balance mode
                 })
-                print("🎨 White balance controls applied")
+                print("🎨 Auto white balance controls applied")
             except Exception as wb_error:
                 print(f"⚠️ White balance control warning: {wb_error}")
                 # Continue anyway, basic functionality should still work
@@ -292,9 +293,19 @@ class CameraManager:
         """Capture frame using PiCamera2"""
         try:
             frame = self.camera.capture_array()
-            frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-            _, buffer = cv2.imencode('.jpg', frame_bgr, [cv2.IMWRITE_JPEG_QUALITY, 85])
+            
+            # Debug: Print frame info on first capture only
+            if not hasattr(self, '_debug_printed'):
+                print(f"🔍 Frame shape: {frame.shape}, dtype: {frame.dtype}")
+                print(f"🔍 Using frame as-is (PiCamera2 should output correct format)")
+                self._debug_printed = True
+            
+            # PiCamera2 already returns BGR on most systems - don't force conversion
+            frame_bgr = frame
+            
+            _, buffer = cv2.imencode('.jpg', frame_bgr, [cv2.IMWRITE_JPEG_QUALITY, 95])
             return buffer.tobytes()
+            
         except Exception as e:
             print(f"PiCamera2 capture error: {e}")
             return None
