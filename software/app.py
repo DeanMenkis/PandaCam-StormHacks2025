@@ -5,7 +5,12 @@ import os
 import subprocess
 import threading
 import time
+import base64
 from datetime import datetime
+import multiprocessing as mp
+from multiprocessing import shared_memory
+import numpy as np
+import cv2
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for React frontend
@@ -29,6 +34,12 @@ printer_state = {
 
 # Video streaming process (will be set when streaming starts)
 video_process = None
+
+# Camera frame storage
+current_frame = None
+camera_active = False
+frame_lock = threading.Lock()
+shared_memory_handle = None
 
 @app.route('/')
 def home():
@@ -186,19 +197,129 @@ def update_print_status():
             "timestamp": datetime.now().isoformat()
         }), 500
 
+def read_frame_from_shared_memory():
+    """Read frame data from shared memory"""
+    global current_frame, camera_active, shared_memory_handle
+    
+    try:
+        # Try to connect to existing shared memory
+        if shared_memory_handle is None:
+            try:
+                shared_memory_handle = shared_memory.SharedMemory(name="camera_frame")
+                print("✓ Connected to shared memory 'camera_frame'")
+            except FileNotFoundError:
+                print("✗ Shared memory 'camera_frame' not found")
+                return None
+        
+        # Read frame data from shared memory
+        frame_bytes = bytes(shared_memory_handle.buf)
+        
+        # Check if we have valid data (not all zeros)
+        if len(frame_bytes) == 0 or all(b == 0 for b in frame_bytes[:100]):
+            print("⚠ Shared memory contains no data or all zeros")
+            return None
+        
+        # Convert bytes back to numpy array
+        frame_array = np.frombuffer(frame_bytes, dtype=np.uint8)
+        
+        # Calculate the expected size for 640x480x3
+        expected_size = 640 * 480 * 3
+        
+        # Check if we have the right amount of data
+        if len(frame_array) != expected_size:
+            print(f"⚠ Frame size mismatch: got {len(frame_array)} bytes, expected {expected_size}")
+            # Try to handle different sizes by truncating or padding
+            if len(frame_array) > expected_size:
+                frame_array = frame_array[:expected_size]
+                print(f"Truncated to {len(frame_array)} bytes")
+            else:
+                # Pad with zeros if too small
+                padded_array = np.zeros(expected_size, dtype=np.uint8)
+                padded_array[:len(frame_array)] = frame_array
+                frame_array = padded_array
+                print(f"Padded to {len(frame_array)} bytes")
+        
+        # Reshape to image dimensions
+        frame_rgb = frame_array.reshape((480, 640, 3))
+        
+        # Convert RGB to BGR for OpenCV
+        frame_bgr = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
+        
+        # Encode as JPEG
+        _, buffer = cv2.imencode('.jpg', frame_bgr, [cv2.IMWRITE_JPEG_QUALITY, 80])
+        
+        return buffer.tobytes()
+        
+    except Exception as e:
+        print(f"Error reading from shared memory: {e}")
+        return None
+
+def read_camera_status():
+    """Read camera status from status file"""
+    global camera_active
+    
+    try:
+        if os.path.exists("/tmp/camera_status.json"):
+            with open("/tmp/camera_status.json", "r") as f:
+                status_data = json.load(f)
+                camera_active = status_data.get("camera_active", False)
+                frame_count = status_data.get("frame_count", 0)
+                print(f"📊 Camera status: {'Active' if camera_active else 'Inactive'}, Frames: {frame_count}")
+                return True
+        else:
+            print("📁 Camera status file not found")
+    except Exception as e:
+        print(f"Error reading camera status: {e}")
+    
+    return False
+
+def create_placeholder_frame():
+    """Create a placeholder frame when no camera is active"""
+    try:
+        # Create a black frame with text
+        placeholder = np.zeros((480, 640, 3), dtype=np.uint8)
+        
+        # Add text to the placeholder
+        cv2.putText(placeholder, "Camera Not Active", (150, 200), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+        cv2.putText(placeholder, "Waiting for camera...", (120, 250), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.8, (200, 200, 200), 2)
+        
+        # Encode as JPEG
+        _, buffer = cv2.imencode('.jpg', placeholder, [cv2.IMWRITE_JPEG_QUALITY, 80])
+        return buffer.tobytes()
+    except Exception as e:
+        print(f"Error creating placeholder frame: {e}")
+        return None
+
 @app.route('/video_feed')
 def video_feed():
     """MJPEG video streaming endpoint"""
     def generate_frames():
-        global video_process
+        global current_frame, camera_active
         
-        # For now, we'll create a placeholder video stream
-        # In production, this would connect to your camera capture application
         while True:
-            # Placeholder: In real implementation, this would read from your camera
-            # For now, we'll just send a simple frame
-            frame_data = b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + b'placeholder_frame_data' + b'\r\n'
-            yield frame_data
+            # Read camera status
+            read_camera_status()
+            
+            # Try to read frame from shared memory
+            frame_data = read_frame_from_shared_memory()
+            
+            if frame_data and camera_active:
+                # Send the actual camera frame
+                frame_response = b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame_data + b'\r\n'
+            else:
+                # Send placeholder frame when no camera is active
+                placeholder_data = create_placeholder_frame()
+                if placeholder_data:
+                    frame_response = b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + placeholder_data + b'\r\n'
+                else:
+                    # Fallback: send a simple black frame
+                    black_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+                    _, buffer = cv2.imencode('.jpg', black_frame)
+                    frame_response = b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n'
+            
+            yield frame_response
             time.sleep(0.1)  # 10 FPS
     
     return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
