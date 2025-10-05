@@ -1,0 +1,264 @@
+/* Modern 3D Printer Watchdog - External QSS Styles */
+/* Circuit Breakers StormHacks 2025 */
+
+/* Main Application Styling */
+QMainWindow {
+    background-color: #1a1a1a;
+    color: #ffffff;
+}
+
+/* Header Banner */
+#header-banner {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #0d1b2a, stop:0.3 #1b263b,
+                                stop:0.7 #415a77, stop:1 #778da9);
+    border: 2px solid #00d4ff;
+    border-radius: 15px;
+    padding: 15px;
+    margin: 10px;
+    color: #ffffff;
+}
+
+#header-banner QLabel {
+    color: #ffffff;
+    font-weight: bold;
+}
+
+#title-text {
+    font-size: 24px;
+    color: #00d4ff;
+    text-shadow: 0 0 10px #00d4ff;
+}
+
+#subtitle-text {
+    font-size: 14px;
+    color: #b0b0b0;
+}
+
+/* Main Content Areas */
+#content-frame {
+    background-color: #1a1a1a;
+    border-radius: 10px;
+    padding: 5px;
+}
+
+/* Camera Preview Frame */
+#camera-frame {
+    background-color: #2a2a2a;
+    border: 2px solid #00d4ff;
+    border-radius: 15px;
+    padding: 10px;
+}
+
+#camera-label {
+    background-color: #1a1a1a;
+    border: 1px solid #404040;
+    border-radius: 10px;
+    color: #b0b0b0;
+    font-size: 16px;
+}
+
+/* Control Panel */
+#control-panel {
+    background-color: #2a2a2a;
+    border: 2px solid #778da9;
+    border-radius: 15px;
+    padding: 15px;
+}
+
+/* Section Headers */
+.section-header {
+    font-size: 18px;
+    font-weight: bold;
+    color: #00d4ff;
+    margin-bottom: 10px;
+    padding: 5px;
+    border-bottom: 2px solid #00d4ff;
+    border-radius: 5px;
+}
+
+/* Buttons */
+QPushButton {
+    font-family: "Segoe UI", Roboto, sans-serif;
+    font-size: 12px;
+    font-weight: bold;
+    border-radius: 8px;
+    padding: 10px;
+    margin: 2px;
+    border: 1px solid #555555;
+    color: white;
+}
+
+/* Start Button - Green Gradient */
+#start-btn {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 #14a085, stop:1 #0f7a65);
+    border: 2px solid #0a5d4a;
+}
+
+#start-btn:hover {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 #16a085, stop:1 #0c6b59);
+    border: 2px solid #14a085;
+    box-shadow: 0 0 15px #14a085;
+}
+
+#start-btn:pressed {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 #0f7a65, stop:1 #0a5d4a);
+}
+
+/* Stop Button - Red Gradient */
+#stop-btn {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 #ff6b6b, stop:1 #e55555);
+    border: 2px solid #cc4444;
+}
+
+#stop-btn:hover {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 #ff7b7b, stop:1 #e86666);
+    border: 2px solid #ff6b6b;
+    box-shadow: 0 0 15px #ff6b6b;
+}
+
+#stop-btn:pressed {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 #e55555, stop:1 #cc4444);
+}
+
+/* Analyze Button - Blue Gradient */
+#analyze-btn {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 #3498db, stop:1 #2980b9);
+    border: 2px solid #21618c;
+}
+
+#analyze-btn:hover {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 #5dade2, stop:1 #3498db);
+    border: 2px solid #3498db;
+    box-shadow: 0 0 15px #3498db;
+}
+
+#analyze-btn:pressed {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 #2980b9, stop:1 #21618c);
+}
+
+/* Config Button - Orange Gradient */
+#config-btn {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 #fa7268, stop:1 #e85a50);
+    border: 2px solid #d64a40;
+}
+
+#config-btn:hover {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 #fb8c82, stop:1 #fa7268);
+    border: 2px solid #fa7268;
+    box-shadow: 0 0 15px #fa7268;
+}
+
+/* Text Areas */
+QTextEdit {
+    background-color: #1a1a1a;
+    border: 2px solid #404040;
+    border-radius: 8px;
+    padding: 8px;
+    color: #ffffff;
+    font-family: "Consolas", "Monaco", monospace;
+    font-size: 11px;
+    selection-background-color: #00d4ff;
+}
+
+/* Status Indicator */
+#status-indicator {
+    border-radius: 12px;
+    border: 2px solid #404040;
+    background-color: #2a2a2a;
+}
+
+/* Status Light */
+#status-light {
+    border-radius: 8px;
+    border: 1px solid #555555;
+}
+
+/* Slider */
+QSlider::groove:horizontal {
+    border: 1px solid #404040;
+    height: 8px;
+    background: #2a2a2a;
+    margin: 2px 0;
+    border-radius: 4px;
+}
+
+QSlider::handle:horizontal {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 #00d4ff, stop:1 #0099cc);
+    border: 2px solid #0077aa;
+    width: 18px;
+    margin: -2px 0;
+    border-radius: 8px;
+}
+
+QSlider::handle:horizontal:hover {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 #33e0ff, stop:1 #00d4ff);
+    border: 2px solid #00d4ff;
+}
+
+/* Group Boxes */
+QGroupBox {
+    font-weight: bold;
+    border: 2px solid #778da9;
+    border-radius: 10px;
+    margin-top: 1ex;
+    background-color: #2a2a2a;
+    color: #ffffff;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 10px;
+    padding: 0 10px 0 10px;
+    color: #00d4ff;
+    font-weight: bold;
+}
+
+/* Status Bar */
+#status-bar {
+    background-color: #2a2a2a;
+    border: 1px solid #404040;
+    border-radius: 5px;
+    padding: 5px 10px;
+    color: #ffffff;
+}
+
+/* Scroll Bars */
+QScrollBar:vertical {
+    background-color: #2a2a2a;
+    width: 12px;
+    border-radius: 6px;
+}
+
+QScrollBar::handle:vertical {
+    background-color: #404040;
+    border-radius: 6px;
+    min-height: 30px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background-color: #555555;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    border: none;
+    background: none;
+}
+
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+    background: none;
+}
+
