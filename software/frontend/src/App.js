@@ -3,52 +3,90 @@ import axios from 'axios';
 import './App.css';
 
 function App() {
-  const [data, setData] = useState(null);
+  const [printerStatus, setPrinterStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
-  const fetchData = async () => {
+  const fetchPrinterStatus = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/data');
+      const response = await axios.get('/api/printer/status');
       if (response.data.success) {
-        setData(response.data.data);
+        setPrinterStatus(response.data.data);
         setLastUpdated(new Date().toLocaleTimeString());
         setError(null);
       } else {
-        setError('Failed to fetch data');
+        setError('Failed to fetch printer status');
       }
     } catch (err) {
       setError('Error connecting to backend: ' + err.message);
-      console.error('Error fetching data:', err);
+      console.error('Error fetching printer status:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchData();
-    // Auto-refresh every 5 seconds
-    const interval = setInterval(fetchData, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'running': return '#4CAF50';
-      case 'warning': return '#FF9800';
-      case 'error': return '#F44336';
-      default: return '#9E9E9E';
+  const startPrinter = async () => {
+    try {
+      setActionLoading(true);
+      const response = await axios.post('/api/printer/start');
+      if (response.data.success) {
+        setPrinterStatus(response.data.data);
+        setError(null);
+      } else {
+        setError('Failed to start printer monitoring');
+      }
+    } catch (err) {
+      setError('Error starting printer: ' + err.message);
+    } finally {
+      setActionLoading(false);
     }
   };
 
-  if (loading && !data) {
+  const stopPrinter = async () => {
+    try {
+      setActionLoading(true);
+      const response = await axios.post('/api/printer/stop');
+      if (response.data.success) {
+        setPrinterStatus(response.data.data);
+        setError(null);
+      } else {
+        setError('Failed to stop printer monitoring');
+      }
+    } catch (err) {
+      setError('Error stopping printer: ' + err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPrinterStatus();
+    // Auto-refresh every 3 seconds
+    const interval = setInterval(fetchPrinterStatus, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const getStatusColor = (isRunning, failureDetected) => {
+    if (failureDetected) return '#F44336'; // Red for failure
+    if (isRunning) return '#4CAF50'; // Green for running
+    return '#9E9E9E'; // Gray for stopped
+  };
+
+  const getStatusText = (isRunning, failureDetected) => {
+    if (failureDetected) return 'FAILURE DETECTED';
+    if (isRunning) return 'MONITORING';
+    return 'STOPPED';
+  };
+
+  if (loading && !printerStatus) {
     return (
       <div className="app">
         <div className="loading">
           <h2>Loading...</h2>
-          <p>Connecting to Raspberry Pi...</p>
+          <p>Connecting to 3D Printer Monitoring System...</p>
         </div>
       </div>
     );
@@ -57,13 +95,13 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>Circuit Breakers Dashboard</h1>
+        <h1>3D Printer Monitoring System</h1>
         <div className="status-indicator">
           <div 
             className="status-dot" 
-            style={{ backgroundColor: getStatusColor(data?.status) }}
+            style={{ backgroundColor: getStatusColor(printerStatus?.is_running, printerStatus?.failure_detected) }}
           ></div>
-          <span>Status: {data?.status || 'Unknown'}</span>
+          <span>Status: {getStatusText(printerStatus?.is_running, printerStatus?.failure_detected)}</span>
         </div>
         {lastUpdated && (
           <p className="last-updated">Last updated: {lastUpdated}</p>
@@ -74,77 +112,84 @@ function App() {
         <div className="error-message">
           <h3>Error</h3>
           <p>{error}</p>
-          <button onClick={fetchData} className="retry-button">
+          <button onClick={fetchPrinterStatus} className="retry-button">
             Retry
           </button>
         </div>
       )}
 
-      {data && (
-        <main className="dashboard">
-          <div className="cards-grid">
-            {/* Sensors Card */}
-            <div className="card">
-              <h2>Sensor Data</h2>
-              <div className="sensor-grid">
-                <div className="sensor-item">
-                  <span className="sensor-label">Temperature</span>
-                  <span className="sensor-value">{data.sensors?.temperature}°C</span>
+      <main className="dashboard">
+        <div className="main-grid">
+          {/* Video Stream */}
+          <div className="video-card">
+            <h2>Live Camera Feed</h2>
+            <div className="video-container">
+              {printerStatus?.is_running ? (
+                <img 
+                  src="/video_feed" 
+                  alt="3D Printer Camera Feed"
+                  className="video-stream"
+                />
+              ) : (
+                <div className="video-placeholder">
+                  <p>Camera feed will appear when monitoring starts</p>
                 </div>
-                <div className="sensor-item">
-                  <span className="sensor-label">Humidity</span>
-                  <span className="sensor-value">{data.sensors?.humidity}%</span>
-                </div>
-                <div className="sensor-item">
-                  <span className="sensor-label">Pressure</span>
-                  <span className="sensor-value">{data.sensors?.pressure} hPa</span>
-                </div>
-              </div>
-            </div>
-
-            {/* System Info Card */}
-            <div className="card">
-              <h2>System Information</h2>
-              <div className="system-grid">
-                <div className="system-item">
-                  <span className="system-label">CPU Usage</span>
-                  <div className="progress-bar">
-                    <div 
-                      className="progress-fill" 
-                      style={{ width: `${data.system_info?.cpu_usage}%` }}
-                    ></div>
-                  </div>
-                  <span className="system-value">{data.system_info?.cpu_usage}%</span>
-                </div>
-                <div className="system-item">
-                  <span className="system-label">Memory Usage</span>
-                  <div className="progress-bar">
-                    <div 
-                      className="progress-fill" 
-                      style={{ width: `${data.system_info?.memory_usage}%` }}
-                    ></div>
-                  </div>
-                  <span className="system-value">{data.system_info?.memory_usage}%</span>
-                </div>
-                <div className="system-item">
-                  <span className="system-label">Disk Usage</span>
-                  <div className="progress-bar">
-                    <div 
-                      className="progress-fill" 
-                      style={{ width: `${data.system_info?.disk_usage}%` }}
-                    ></div>
-                  </div>
-                  <span className="system-value">{data.system_info?.disk_usage}%</span>
-                </div>
-              </div>
+              )}
             </div>
           </div>
 
-          <div className="timestamp">
-            <p>Data timestamp: {new Date(data.timestamp).toLocaleString()}</p>
+          {/* Control Panel */}
+          <div className="control-card">
+            <h2>Printer Control</h2>
+            <div className="control-buttons">
+              <button 
+                className={`control-btn start-btn ${printerStatus?.is_running ? 'disabled' : ''}`}
+                onClick={startPrinter}
+                disabled={printerStatus?.is_running || actionLoading}
+              >
+                {actionLoading ? 'Starting...' : 'Start Monitoring'}
+              </button>
+              <button 
+                className={`control-btn stop-btn ${!printerStatus?.is_running ? 'disabled' : ''}`}
+                onClick={stopPrinter}
+                disabled={!printerStatus?.is_running || actionLoading}
+              >
+                {actionLoading ? 'Stopping...' : 'Stop Monitoring'}
+              </button>
+            </div>
+            
+            {/* Failure Alert */}
+            {printerStatus?.failure_detected && (
+              <div className="failure-alert">
+                <h3>⚠️ PRINT FAILURE DETECTED</h3>
+                <p>Last failure: {printerStatus.last_failure_time ? new Date(printerStatus.last_failure_time).toLocaleString() : 'Unknown'}</p>
+              </div>
+            )}
           </div>
-        </main>
-      )}
+        </div>
+
+        {/* Status Information */}
+        <div className="status-info">
+          <div className="status-item">
+            <span className="status-label">Monitoring:</span>
+            <span className={`status-value ${printerStatus?.is_monitoring ? 'active' : 'inactive'}`}>
+              {printerStatus?.is_monitoring ? 'Active' : 'Inactive'}
+            </span>
+          </div>
+          <div className="status-item">
+            <span className="status-label">Video Stream:</span>
+            <span className={`status-value ${printerStatus?.video_stream_active ? 'active' : 'inactive'}`}>
+              {printerStatus?.video_stream_active ? 'Active' : 'Inactive'}
+            </span>
+          </div>
+          <div className="status-item">
+            <span className="status-label">System Time:</span>
+            <span className="status-value">
+              {printerStatus?.timestamp ? new Date(printerStatus.timestamp).toLocaleString() : 'Unknown'}
+            </span>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
