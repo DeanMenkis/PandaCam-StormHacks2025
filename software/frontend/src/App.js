@@ -437,12 +437,6 @@ function App() {
         {lastUpdated && (
           <p className="last-updated">
             Last updated: {lastUpdated}
-            <button 
-              onClick={fetchPrinterStatus} 
-              style={{marginLeft: '10px', padding: '2px 8px', fontSize: '12px'}}
-            >
-              🔄 Test Update
-            </button>
           </p>
         )}
       </header>
@@ -458,7 +452,7 @@ function App() {
       )}
 
       <main className="dashboard">
-        {/* Row 1: Print Status and Camera Controls */}
+        {/* Row 1: Print Status, Camera Controls, and AI Monitoring */}
         <div className="top-row">
           {/* Print Status */}
           <div className="print-status-card">
@@ -513,6 +507,39 @@ function App() {
               </button>
             </div>
           </div>
+
+          {/* AI Monitoring */}
+          <div className="ai-status-card">
+            <h2>🤖 AI Monitoring</h2>
+            <div className="ai-status-content">
+              <div className="ai-status-indicator">
+                <div 
+                  className="ai-status-dot" 
+                  style={{ backgroundColor: aiStatus?.ai_monitoring_active ? '#4CAF50' : '#9E9E9E' }}
+                ></div>
+                <span className="ai-status-text">
+                  {aiStatus?.ai_monitoring_active ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+              
+              <div className="ai-controls">
+                <button 
+                  className={`control-btn start-btn ${aiStatus?.ai_monitoring_active ? 'disabled' : ''}`}
+                  onClick={startAiMonitoring}
+                  disabled={aiStatus?.ai_monitoring_active || actionLoading}
+                >
+                  {actionLoading ? 'Starting...' : 'Start AI Monitoring'}
+                </button>
+                <button 
+                  className={`control-btn stop-btn ${!aiStatus?.ai_monitoring_active ? 'disabled' : ''}`}
+                  onClick={stopAiMonitoring}
+                  disabled={!aiStatus?.ai_monitoring_active || actionLoading}
+                >
+                  {actionLoading ? 'Stopping...' : 'Stop AI Monitoring'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Row 2: Live Camera Feed */}
@@ -553,7 +580,7 @@ function App() {
               {whiteBalance.auto ? '🎨 Auto' : '🔄 Reset'}
             </button>
           </div>
-          
+
           <div className="video-container">
             {printerStatus?.is_running ? (
               <>
@@ -588,170 +615,6 @@ function App() {
           </div>
         </div>
 
-        {/* AI Monitoring Section */}
-        <div className="ai-monitoring-section">
-          <div className="ai-status-card">
-            <h2>🤖 AI Monitoring</h2>
-            <div className="ai-status-content">
-              <div className="ai-status-indicator">
-                <div 
-                  className="ai-status-dot" 
-                  style={{ backgroundColor: aiStatus?.ai_monitoring_active ? '#4CAF50' : '#9E9E9E' }}
-                ></div>
-                <span className="ai-status-text">
-                  {aiStatus?.ai_monitoring_active ? 'Active' : 'Inactive'}
-                </span>
-                {aiStatus?.ai_monitoring_active && (
-                  <div className="ai-countdown">
-                    <span className="countdown-label">
-                      {aiStatus.ai_monitoring_paused ? 'PAUSED' : 
-                       aiStatus.ai_process_status === 'analyzing' ? 'Analyzing now...' :
-                       countdown > 0 ? 'Next analysis in:' : 'Ready...'}
-                    </span>
-                    <span className={`countdown-timer ${aiStatus.ai_monitoring_paused ? 'paused' : aiStatus.ai_process_status === 'analyzing' ? 'analyzing' : ''}`}>
-                      {aiStatus.ai_monitoring_paused ? '⏸️' : 
-                       aiStatus.ai_process_status === 'analyzing' ? '⏳' :
-                       countdown > 0 ? `${countdown}s` : '✓'}
-                    </span>
-                  </div>
-                )}
-              </div>
-              
-              {/* AI Process Status */}
-              {aiStatus?.ai_monitoring_active && (
-                <div className="ai-process-status">
-                  <div className="process-status-item">
-                    <span className="process-label">Status:</span>
-                    <span className={`process-value ${aiStatus.ai_process_status || 'idle'}`}>
-                      {(aiStatus.ai_process_status || 'idle').replace('_', ' ').toUpperCase()}
-                    </span>
-                  </div>
-                  <div className="process-status-item">
-                    <span className="process-label">Analyses:</span>
-                    <span className="process-value">{aiStatus.ai_analysis_count || 0}</span>
-                  </div>
-                  <div className="process-status-item">
-                    <span className="process-label">Success Rate:</span>
-                    <span className="process-value">
-                      {Math.round((aiStatus.ai_success_rate || 0) * 100)}%
-                    </span>
-                  </div>
-                </div>
-              )}
-              
-              <div className="ai-controls">
-                <button 
-                  className={`control-btn start-btn ${aiStatus?.ai_monitoring_active ? 'disabled' : ''}`}
-                  onClick={startAiMonitoring}
-                  disabled={aiStatus?.ai_monitoring_active || actionLoading}
-                >
-                  {actionLoading ? 'Starting...' : 'Start AI Monitoring'}
-                </button>
-                <button 
-                  className={`control-btn stop-btn ${!aiStatus?.ai_monitoring_active ? 'disabled' : ''}`}
-                  onClick={stopAiMonitoring}
-                  disabled={!aiStatus?.ai_monitoring_active || actionLoading}
-                >
-                  {actionLoading ? 'Stopping...' : 'Stop AI Monitoring'}
-                </button>
-                {aiStatus?.ai_monitoring_active && (
-                  <>
-                    <button 
-                      className={`control-btn pause-btn ${aiStatus?.ai_monitoring_paused ? 'disabled' : ''}`}
-                      onClick={pauseAiMonitoring}
-                      disabled={aiStatus?.ai_monitoring_paused || actionLoading}
-                    >
-                      {actionLoading ? 'Pausing...' : '⏸️ Pause'}
-                    </button>
-                    <button 
-                      className={`control-btn resume-btn ${!aiStatus?.ai_monitoring_paused ? 'disabled' : ''}`}
-                      onClick={resumeAiMonitoring}
-                      disabled={!aiStatus?.ai_monitoring_paused || actionLoading}
-                    >
-                      {actionLoading ? 'Resuming...' : '▶️ Resume'}
-                    </button>
-                    <div className="interval-dropdown">
-                      <select
-                        value={interval}
-                        onChange={(e) => setAiInterval(parseInt(e.target.value))}
-                        disabled={!aiStatus?.ai_monitoring_paused || actionLoading}
-                        className="interval-select"
-                      >
-                        <option value={5}>5s</option>
-                        <option value={10}>10s</option>
-                        <option value={15}>15s</option>
-                        <option value={25}>25s</option>
-                        <option value={30}>30s</option>
-                        <option value={45}>45s</option>
-                        <option value={60}>60s</option>
-                      </select>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {/* AI Analysis Results */}
-              {(() => {
-                const shouldShow = aiStatus?.ai_response && aiStatus.ai_response !== "No analysis yet.";
-                console.log('🔍 AI Analysis Display Check:', {
-                  has_aiStatus: !!aiStatus,
-                  has_response: !!aiStatus?.ai_response,
-                  response_value: aiStatus?.ai_response,
-                  is_not_default: aiStatus?.ai_response !== "No analysis yet.",
-                  should_show: shouldShow
-                });
-                return shouldShow;
-              })() && (
-                <div className="ai-analysis-card">
-                  <h3>Latest AI Analysis 
-                    {aiStatus.last_ai_analysis && (
-                      <span className="update-indicator">
-                        • Updated {new Date(aiStatus.last_ai_analysis).toLocaleTimeString()}
-                      </span>
-                    )}
-                  </h3>
-                  <div className="ai-response">
-                    <p>{aiStatus.ai_response}</p>
-                  </div>
-                  <div className="ai-metadata">
-                    <span className="ai-binary-status">
-                      Binary Status: {aiStatus.ai_binary_status === 1 ? '✅ 1 (Good)' : '❌ 0 (Bad)'}
-                    </span>
-                    <span className="ai-confidence">
-                      Confidence: {Math.round((aiStatus.ai_confidence || 0) * 100)}%
-                    </span>
-                    {aiStatus.last_ai_analysis && (
-                      <span className="ai-timestamp">
-                        {new Date(aiStatus.last_ai_analysis).toLocaleString()}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* AI Response Display */}
-              {(() => {
-                const shouldShow = aiStatus?.ai_response && aiStatus.ai_response !== "No analysis yet.";
-                console.log('🔍 AI Response Display Check:', {
-                  has_aiStatus: !!aiStatus,
-                  has_response: !!aiStatus?.ai_response,
-                  response_value: aiStatus?.ai_response,
-                  is_not_default: aiStatus?.ai_response !== "No analysis yet.",
-                  should_show: shouldShow
-                });
-                return shouldShow;
-              })() && (
-                <div className="ai-prompt-card">
-                  <h3>🤖 Gemini AI Response</h3>
-                  <div className="ai-prompt-content">
-                    <pre>{aiStatus.ai_response}</pre>
-                  </div>
-                </div>
-              )}
-
-              </div>
-            </div>
-          </div>
 
       </main>
       </div>
