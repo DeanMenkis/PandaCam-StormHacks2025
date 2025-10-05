@@ -354,7 +354,10 @@ Be helpful and specific. If you see a problem, suggest what might be causing it.
             }
         """
         try:
+            print(f"🔍 Starting Gemini API analysis at {datetime.now().strftime('%H:%M:%S')}")
+            
             if not frame_data:
+                print("❌ No frame data provided to Gemini analyzer")
                 return {
                     'success': False,
                     'response_text': None,
@@ -363,8 +366,11 @@ Be helpful and specific. If you see a problem, suggest what might be causing it.
                     'error': 'No frame data provided'
                 }
             
+            print(f"📷 Frame data size: {len(frame_data)} bytes")
+            
             # Encode frame as base64
             frame_b64 = base64.b64encode(frame_data).decode('utf-8')
+            print(f"📝 Base64 encoded frame size: {len(frame_b64)} characters")
             
             # Prepare request payload
             payload = {
@@ -383,6 +389,9 @@ Be helpful and specific. If you see a problem, suggest what might be causing it.
                 ]
             }
             
+            print(f"🌐 Sending request to Gemini API: {self.api_url}")
+            print(f"🔑 Using API key: {self.api_key[:20]}...{self.api_key[-10:]}")
+            
             # Make API request
             headers = {
                 'Content-Type': 'application/json'
@@ -395,8 +404,13 @@ Be helpful and specific. If you see a problem, suggest what might be causing it.
                 timeout=30
             )
             
+            print(f"📡 Gemini API response status: {response.status_code}")
+            print(f"📡 Response headers: {dict(response.headers)}")
+            
             if response.status_code == 200:
                 result = response.json()
+                print(f"✅ Gemini API response received successfully")
+                print(f"📄 Raw response: {json.dumps(result, indent=2)}")
                 
                 # Extract response text
                 if 'candidates' in result and len(result['candidates']) > 0:
@@ -424,6 +438,7 @@ Be helpful and specific. If you see a problem, suggest what might be causing it.
                 }
             else:
                 error_msg = f"Gemini API error: {response.status_code} - {response.text}"
+                print(f"❌ {error_msg}")
                 return {
                     'success': False,
                     'response_text': None,
@@ -433,28 +448,34 @@ Be helpful and specific. If you see a problem, suggest what might be causing it.
                 }
                 
         except requests.exceptions.Timeout:
+            error_msg = 'Gemini API request timeout'
+            print(f"⏰ {error_msg}")
             return {
                 'success': False,
                 'response_text': None,
                 'print_status': 'idle',
                 'confidence': 0.5,
-                'error': 'Gemini API request timeout'
+                'error': error_msg
             }
         except requests.exceptions.RequestException as e:
+            error_msg = f'Gemini API request failed: {str(e)}'
+            print(f"🌐 {error_msg}")
             return {
                 'success': False,
                 'response_text': None,
                 'print_status': 'idle',
                 'confidence': 0.5,
-                'error': f'Gemini API request failed: {str(e)}'
+                'error': error_msg
             }
         except Exception as e:
+            error_msg = f'Unexpected error: {str(e)}'
+            print(f"💥 {error_msg}")
             return {
                 'success': False,
                 'response_text': None,
                 'print_status': 'idle',
                 'confidence': 0.5,
-                'error': f'Unexpected error: {str(e)}'
+                'error': error_msg
             }
     
     def _parse_response(self, response_text):
@@ -538,9 +559,11 @@ def ai_monitoring_worker():
                     continue
             
             # Capture frame
+            print(f"📸 AI monitoring: Attempting to capture frame at {datetime.now().strftime('%H:%M:%S')}")
             frame_data = camera_manager.capture_frame()
             
             if frame_data:
+                print(f"✅ Frame captured successfully, size: {len(frame_data)} bytes")
                 print(f"🤖 AI monitoring: Analyzing frame at {datetime.now().strftime('%H:%M:%S')}")
                 
                 # Analyze frame with Gemini
