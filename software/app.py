@@ -13,6 +13,8 @@ import requests
 import re
 import shutil
 
+from config import *
+
 from prompt import PROMPT
 from alert_system import alert_system
 
@@ -29,6 +31,7 @@ try:
     import sys
     sys.path.insert(0, '/usr/lib/python3/dist-packages')
     from picamera2 import Picamera2
+    import libcamera
     PICAMERA2_AVAILABLE = True
     print("✅ PiCamera2 library available")
 except (ImportError, OSError) as e:
@@ -53,7 +56,7 @@ printer_state = {
     "print_time_elapsed": 0,  # in minutes
     "print_time_remaining": 0,  # in minutes
     "ai_monitoring_active": False,  # AI monitoring status
-    "ai_response": None,  # Latest AI analysis response
+    "ai_response": "No analysis yet.",  # Latest AI analysis response
     "ai_confidence": 0.0,  # AI confidence level (0.5-1.0)
     "ai_binary_status": 0,  # Binary classification: 1 = good, 0 = bad
     "last_ai_analysis": None,  # Timestamp of last AI analysis
@@ -70,9 +73,9 @@ camera_active = False
 frame_lock = threading.Lock()
 
 # AI Monitoring configuration and state
-GEMINI_API_KEY = "AIzaSyBHIiKiXJNKW6Ot5ZuFT1S2CiajIyvRP_c"
+
 GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
-AI_MONITORING_INTERVAL = 15  # seconds - default interval (0.067 Hz)
+AI_MONITORING_INTERVAL = 10  # seconds - default interval (0.1 Hz)
 AI_MAX_RETRIES = 2  # Maximum retries for failed API calls
 AI_RETRY_DELAY = 5  # seconds between retries
 
@@ -338,13 +341,14 @@ class CameraManager:
             print("📹 Trying PiCamera2...")
             self.camera = Picamera2()
             
-            # Use proper auto white balance with PiCamera2
-            print("🎨 Using auto white balance (PiCamera2 AWB)")
-            config = self.camera.create_video_configuration(
-                main={"size": (640, 480), "format": "RGB888"},
+            # Use MAXIMUM resolution for ultimate quality!
+            print("🚀 Using MAXIMUM resolution: 1456x1088 (1.6MP)!")
+            config = self.camera.create_still_configuration(
+                main={"size": (1456, 1088), "format": "RGB888"},  # Standard RGB format
+                transform=libcamera.Transform(hflip=0, vflip=0),  # No flips
                 controls={
-                    "FrameRate": 15,
-                    "AwbMode": 0,  # Auto white balance (0 = auto, 1 = manual)
+                    "FrameRate": 30,  # 30fps for maximum resolution
+                    "AwbMode": 2,  # Auto white balance mode 2
                     "ExposureTime": 0,  # Auto exposure
                     "AnalogueGain": 0,  # Auto gain
                 }
@@ -355,11 +359,13 @@ class CameraManager:
             
             # Set additional controls after starting
             try:
-                # Apply proper auto white balance
+                # Apply auto white balance mode 2
                 self.camera.set_controls({
-                    "AwbMode": 0,  # Enable auto white balance (0 = auto)
+                    "AwbMode": 2,  # Auto white balance mode 2
                 })
-                print("🎨 Auto white balance enabled (PiCamera2 AWB)")
+                print("🎨 Auto white balance enabled (PiCamera2 AWB Mode 2)")
+                print("🔄 Transform applied in config: hflip=0, vflip=0 (no flips)")
+                    
             except Exception as wb_error:
                 print(f"⚠️ White balance control warning: {wb_error}")
                 # Continue anyway, basic functionality should still work
@@ -456,6 +462,22 @@ class CameraManager:
             print(f"Error capturing frame: {e}")
             return None
     
+    def capture_ai_frame(self):
+        """Capture a high-resolution frame for AI analysis"""
+        try:
+            if not self.is_initialized:
+                return None
+            
+            with self.lock:
+                if self.camera_type == 'picamera2':
+                    return self._capture_picamera2_ai()
+                else:
+                    # Fallback to regular capture
+                    return self.capture_frame()
+        except Exception as e:
+            print(f"Error capturing AI frame: {e}")
+            return None
+    
     def _capture_picamera(self):
         """Capture frame using legacy PiCamera"""
         try:
@@ -469,27 +491,57 @@ class CameraManager:
             return None
     
     def _capture_picamera2(self):
-        """Capture frame using PiCamera2"""
+        """Capture frame using PiCamera2 for streaming (fast, RGB888)"""
         try:
+            # Capture RGB frame directly
             frame = self.camera.capture_array()
             
-            # Debug: Print frame info on first capture only
-            if not hasattr(self, '_debug_printed'):
-                print(f"🔍 Frame shape: {frame.shape}, dtype: {frame.dtype}")
-                print(f"🔍 Using frame as-is (PiCamera2 should output correct format)")
-                self._debug_printed = True
+            # PiCamera2 returns RGB, keep as RGB for JPEG encoding
+            if len(frame.shape) == 3 and frame.shape[2] == 3:
+                frame_rgb = frame
+            else:
+                frame_rgb = frame
             
-            # PiCamera2 already returns BGR on most systems - don't force conversion
-            frame_bgr = frame
-            
-            # Resize frame to 720p 16:9 aspect ratio for AI analysis
-            resized_frame = cv2.resize(frame_bgr, (1280, 720))  # 720p 16:9 aspect ratio
-            
-            _, buffer = cv2.imencode('.jpg', resized_frame, [cv2.IMWRITE_JPEG_QUALITY, 90])  # High quality for AI
+            # Compress to JPEG for streaming (high quality for max resolution)
+            # Use RGB format directly - no conversion needed
+            _, buffer = cv2.imencode('.jpg', frame_rgb, [cv2.IMWRITE_JPEG_QUALITY, 85])
             return buffer.tobytes()
             
         except Exception as e:
-            print(f"PiCamera2 capture error: {e}")
+            print(f"PiCamera2 streaming capture error: {e}")
+            return None
+    
+    def _capture_picamera2_ai(self):
+        """Capture high-resolution frame for AI analysis"""
+        try:
+            # Capture RGB frame for AI analysis
+            frame = self.camera.capture_array()
+            
+            # PiCamera2 returns RGB, keep as RGB for AI
+            if len(frame.shape) == 3 and frame.shape[2] == 3:
+                frame_rgb = frame
+            else:
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            
+            # Resize to optimal size for AI (keep aspect ratio)
+            height, width = frame_rgb.shape[:2]
+            target_size = 1280  # Good balance for AI analysis
+            
+            if width > height:
+                new_width = target_size
+                new_height = int(height * target_size / width)
+            else:
+                new_height = target_size
+                new_width = int(width * target_size / height)
+            
+            resized_frame = cv2.resize(frame_rgb, (new_width, new_height))
+            
+            # High quality JPEG for AI analysis
+            _, buffer = cv2.imencode('.jpg', resized_frame, [cv2.IMWRITE_JPEG_QUALITY, 95])
+            return buffer.tobytes()
+            
+        except Exception as e:
+            print(f"PiCamera2 AI capture error: {e}")
             return None
     
     def _capture_opencv(self):
@@ -849,7 +901,7 @@ def ai_monitoring_worker():
                 countdown = 0
             
             # Update printer state with countdown and process status
-            with ai_monitoring_lock:
+            with printer_state_lock:
                 printer_state["ai_countdown"] = countdown
                 if ai_monitoring_paused:
                     printer_state["ai_process_status"] = "paused"
@@ -872,46 +924,41 @@ def ai_monitoring_worker():
                 time.sleep(1)  # Update countdown every second
                 continue
             # Update process status to capturing
-            with ai_monitoring_lock:
+            with printer_state_lock:
                 printer_state["ai_process_status"] = "capturing"
                 printer_state["timestamp"] = current_time.isoformat()
             
-            # Ensure camera is initialized
+            # Check if camera is available, wait for it to be initialized by video stream
             if not camera_manager.is_initialized:
-                print("📹 AI monitoring: Initializing camera...")
-                with ai_monitoring_lock:
-                    printer_state["ai_process_status"] = "initializing_camera"
+                print("📹 AI monitoring: Waiting for camera to be initialized by video stream...")
+                with printer_state_lock:
+                    printer_state["ai_process_status"] = "waiting_for_camera"
                     printer_state["timestamp"] = current_time.isoformat()
-                
-                if not camera_manager.initialize_camera():
-                    print("❌ AI monitoring: Failed to initialize camera, skipping analysis")
-                    with ai_monitoring_lock:
-                        printer_state["ai_process_status"] = "camera_unavailable"
-                        printer_state["timestamp"] = current_time.isoformat()
-                    ai_stats["next_analysis_time"] = datetime.now() + timedelta(seconds=AI_MONITORING_INTERVAL)
-                    time.sleep(1)
-                    continue
+                # Wait longer for camera to be initialized
+                ai_stats["next_analysis_time"] = datetime.now() + timedelta(seconds=5)
+                time.sleep(1)
+                continue
             
             # Double-check camera is still initialized before capturing
             if not camera_manager.is_initialized:
                 print("❌ AI monitoring: Camera not available, skipping analysis")
-                with ai_monitoring_lock:
+                with printer_state_lock:
                     printer_state["ai_process_status"] = "camera_unavailable"
                     printer_state["timestamp"] = current_time.isoformat()
                 ai_stats["next_analysis_time"] = datetime.now() + timedelta(seconds=AI_MONITORING_INTERVAL)
                 time.sleep(1)
                 continue
             
-            # Capture frame
-            print(f"📸 AI monitoring: Attempting to capture frame at {datetime.now().strftime('%H:%M:%S')}")
-            frame_data = camera_manager.capture_frame()
+            # Capture high-resolution frame for AI analysis
+            print(f"📸 AI monitoring: Attempting to capture AI frame at {datetime.now().strftime('%H:%M:%S')}")
+            frame_data = camera_manager.capture_ai_frame()
             
             if frame_data and len(frame_data) > 1000:  # Ensure frame has meaningful data
                 print(f"✅ Frame captured successfully, size: {len(frame_data)} bytes")
                 print(f"🤖 AI monitoring: Analyzing frame at {datetime.now().strftime('%H:%M:%S')}")
                 
                 # Update process status to analyzing
-                with ai_monitoring_lock:
+                with printer_state_lock:
                     printer_state["ai_process_status"] = "analyzing"
                     printer_state["timestamp"] = current_time.isoformat()
                 
@@ -935,13 +982,18 @@ def ai_monitoring_worker():
                 ai_stats["last_analysis_time"] = current_time
                 
                 # Update printer state with thread safety
-                with ai_monitoring_lock:
+                with printer_state_lock:
                     if analysis_result['success']:
                         # Update state based on AI analysis
                         printer_state["ai_response"] = analysis_result['response_text']
                         printer_state["ai_confidence"] = analysis_result['confidence']
                         printer_state["ai_binary_status"] = analysis_result['binary_status']
                         printer_state["last_ai_analysis"] = datetime.now().isoformat()
+                        
+                        # Debug logging
+                        print(f"🔍 AI Worker: Updated ai_response: {analysis_result['response_text'][:100]}...")
+                        print(f"🔍 AI Worker: Updated ai_confidence: {analysis_result['confidence']}")
+                        print(f"🔍 AI Worker: Updated ai_binary_status: {analysis_result['binary_status']}")
                         
                         # Update main print status based on binary classification
                         if analysis_result['binary_status'] == 1:
@@ -999,11 +1051,9 @@ def ai_monitoring_worker():
                     printer_state["ai_process_status"] = "waiting"
             else:
                 print("⚠️ AI monitoring: Failed to capture frame")
-                with ai_monitoring_lock:
-                    printer_state["ai_response"] = "Failed to capture camera frame"
-                    printer_state["ai_confidence"] = 0.5
+                with printer_state_lock:
+                    # Don't overwrite existing AI response, just update process status
                     printer_state["ai_process_status"] = "capture_failed"
-                    printer_state["last_ai_analysis"] = datetime.now().isoformat()
                     printer_state["timestamp"] = datetime.now().isoformat()
                 
                 # Schedule next analysis
@@ -1017,11 +1067,9 @@ def ai_monitoring_worker():
             
         except Exception as e:
             print(f"❌ AI monitoring thread error: {e}")
-            with ai_monitoring_lock:
-                printer_state["ai_response"] = f"Monitoring error: {str(e)}"
-                printer_state["ai_confidence"] = 0.5
+            with printer_state_lock:
+                # Don't overwrite existing AI response, just update process status
                 printer_state["ai_process_status"] = "error"
-                printer_state["last_ai_analysis"] = datetime.now().isoformat()
                 printer_state["timestamp"] = datetime.now().isoformat()
             
             # Schedule next analysis with longer delay on error
@@ -1034,7 +1082,7 @@ def start_ai_monitoring():
     """Start the AI monitoring thread"""
     global ai_monitoring_thread, ai_monitoring_active, printer_state
     
-    with ai_monitoring_lock:
+    with printer_state_lock:
         if ai_monitoring_active:
             return False, "AI monitoring is already active"
         
@@ -1060,7 +1108,7 @@ def stop_ai_monitoring():
     """Stop the AI monitoring thread"""
     global ai_monitoring_thread, ai_monitoring_active, printer_state
     
-    with ai_monitoring_lock:
+    with printer_state_lock:
         if not ai_monitoring_active:
             return False, "AI monitoring is not active"
         
@@ -1343,7 +1391,7 @@ def stop_ai_monitoring_endpoint():
 def get_ai_status():
     """Get current AI monitoring status and latest analysis results"""
     try:
-        with ai_monitoring_lock:
+        with printer_state_lock:
             ai_status = {
                 "ai_monitoring_active": printer_state["ai_monitoring_active"],
                 "ai_monitoring_paused": ai_monitoring_paused,
@@ -1362,6 +1410,10 @@ def get_ai_status():
                 "ai_success_rate": printer_state["ai_success_rate"],
                 "next_analysis_time": ai_stats["next_analysis_time"].isoformat() if ai_stats["next_analysis_time"] else None
             }
+            
+            # Debug logging for AI response
+            if printer_state["ai_response"] and printer_state["ai_response"] != "No analysis yet.":
+                print(f"🔍 AI Status API: Sending response to frontend: {printer_state['ai_response'][:100]}...")
         
         return jsonify({
             "success": True,
@@ -1518,7 +1570,7 @@ def pause_ai_monitoring():
     try:
         global ai_monitoring_paused
         
-        with ai_monitoring_lock:
+        with printer_state_lock:
             ai_monitoring_paused = True
             printer_state["ai_process_status"] = "paused"
             printer_state["timestamp"] = datetime.now().isoformat()
@@ -1541,7 +1593,7 @@ def resume_ai_monitoring():
     try:
         global ai_monitoring_paused
         
-        with ai_monitoring_lock:
+        with printer_state_lock:
             ai_monitoring_paused = False
             printer_state["ai_process_status"] = "waiting"
             printer_state["timestamp"] = datetime.now().isoformat()
@@ -1769,7 +1821,7 @@ def video_feed():
                         frame_response = b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n'
                 
                 yield frame_response
-                time.sleep(0.033)  # ~30 FPS for smoother video
+                time.sleep(0.01)  # ~100 FPS for ultra-fast streaming
                 
             except Exception as e:
                 print(f"❌ Error in video streaming: {e}")
@@ -1781,6 +1833,132 @@ def video_feed():
                 time.sleep(1)  # Wait longer on error
     
     return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@app.route('/h264_stream')
+def h264_stream():
+    """H.264 streaming endpoint for ultra-low latency"""
+    try:
+        # Check if rpicam-vid is available
+        import subprocess
+        result = subprocess.run(['which', 'rpicam-vid'], capture_output=True, text=True)
+        if result.returncode != 0:
+            return jsonify({
+                "success": False,
+                "error": "rpicam-vid not available. Install with: sudo apt install rpicam-apps"
+            }), 500
+        
+        # Start H.264 streaming process at MAXIMUM resolution!
+        cmd = [
+            'rpicam-vid',
+            '--width', '1456',
+            '--height', '1088', 
+            '--framerate', '30',
+            '--bitrate', '8000000',  # Higher bitrate for max resolution
+            '--codec', 'h264',
+            '--inline',
+            '--timeout', '0',
+            '--output', '-',
+            '--awb', 'auto',
+            '--hflip', '--vflip'  # Flip both to rotate 180 degrees
+        ]
+        
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            bufsize=0
+        )
+        
+        def generate_h264():
+            try:
+                while True:
+                    chunk = process.stdout.read(4096)
+                    if not chunk:
+                        break
+                    yield chunk
+            except Exception as e:
+                print(f"❌ H.264 streaming error: {e}")
+            finally:
+                process.terminate()
+        
+        return Response(
+            generate_h264(),
+            mimetype='video/mp4',
+            headers={
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive',
+                'Content-Type': 'video/mp4'
+            }
+        )
+        
+    except Exception as e:
+        print(f"❌ H.264 stream error: {e}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+@app.route('/api/camera/wb', methods=['POST'])
+def set_white_balance():
+    """Set manual white balance gains (live update)"""
+    try:
+        data = request.get_json()
+        red_gain = float(data.get('red', 1.8))
+        blue_gain = float(data.get('blue', 1.0))
+
+        if camera_manager.camera and camera_manager.camera_type == 'picamera2':
+            camera_manager.camera.set_controls({
+                "AwbEnable": False,  # Disable auto white balance
+                "ColourGains": (red_gain, blue_gain)
+            })
+
+            print(f"🎨 Updated ColourGains → R={red_gain:.2f}, B={blue_gain:.2f}")
+
+            return jsonify({
+                "success": True,
+                "message": f"White balance updated (R={red_gain}, B={blue_gain})"
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "error": "Camera not available or not PiCamera2"
+            }), 500
+
+    except Exception as e:
+        print(f"❌ White balance update error: {e}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+@app.route('/api/camera/wb/reset', methods=['POST'])
+def reset_white_balance():
+    """Reset to auto white balance"""
+    try:
+        if camera_manager.camera and camera_manager.camera_type == 'picamera2':
+            camera_manager.camera.set_controls({
+                "AwbEnable": True,  # Enable auto white balance
+                "AwbMode": 2
+            })
+
+            print("🎨 Reset to auto white balance")
+
+            return jsonify({
+                "success": True,
+                "message": "White balance reset to auto"
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "error": "Camera not available or not PiCamera2"
+            }), 500
+
+    except Exception as e:
+        print(f"❌ White balance reset error: {e}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
 
 # Add a function to print PandaCam message after startup
 def print_pandacam_ready():

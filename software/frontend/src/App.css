@@ -492,6 +492,14 @@
   margin: 0 auto;
 }
 
+/* Top row for Print Status and Camera Controls */
+.top-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 25px;
+  margin-bottom: 25px;
+}
+
 .main-grid {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr;
@@ -531,7 +539,9 @@
 
 .video-container {
   width: 100%;
-  height: 500px;
+  /* Calculate height for 1456x1088 aspect ratio (1.34:1) */
+  height: calc(100vw / 1.34);
+  max-height: 800px; /* Limit max height for very wide screens */
   background: #1a1a1a;
   border-radius: 8px;
   overflow: hidden;
@@ -540,12 +550,109 @@
   justify-content: center;
   border: 2px solid rgba(255,255,255,0.1);
   box-shadow: inset 0 2px 8px rgba(0,0,0,0.3);
+  position: relative;
 }
 
 .video-stream {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain; /* Show full video without cropping */
+  background: #000;
+}
+
+/* White Balance Controls */
+.white-balance-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  margin-bottom: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.wb-control-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 80px;
+}
+
+.wb-control-group label {
+  font-size: 12px;
+  color: #ccc;
+  font-weight: 500;
+}
+
+.wb-slider {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: #333;
+  outline: none;
+  cursor: pointer;
+}
+
+.wb-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #4CAF50;
+  cursor: pointer;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.wb-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #4CAF50;
+  cursor: pointer;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.red-slider::-webkit-slider-thumb {
+  background: #F44336;
+}
+
+.red-slider::-moz-range-thumb {
+  background: #F44336;
+}
+
+.blue-slider::-webkit-slider-thumb {
+  background: #2196F3;
+}
+
+.blue-slider::-moz-range-thumb {
+  background: #2196F3;
+}
+
+.wb-reset-btn {
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 70px;
+}
+
+.wb-reset-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.wb-reset-btn.active {
+  background: rgba(76, 175, 80, 0.3);
+  border-color: #4CAF50;
+  color: #4CAF50;
 }
 
 .video-placeholder {
@@ -899,6 +1006,11 @@
 }
 
 @media (max-width: 1200px) {
+  .top-row {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
   .main-grid {
     grid-template-columns: 1fr 1fr;
     grid-template-rows: auto auto;
@@ -907,9 +1019,18 @@
   .video-card {
     grid-column: 1 / -1;
   }
+  
+  .video-container {
+    max-height: 600px; /* Medium max height for tablets */
+  }
 }
 
 @media (max-width: 768px) {
+  .top-row {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
   .main-grid {
     grid-template-columns: 1fr;
   }
@@ -923,7 +1044,39 @@
   }
   
   .video-container {
-    height: 250px;
+    height: calc(100vw / 1.34);
+    max-height: 300px; /* Smaller max height for mobile */
+    overflow: auto; /* Enable scrolling on mobile */
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    scroll-behavior: smooth;
+  }
+  
+  .video-stream {
+    /* On mobile, allow video to be larger than container for scrolling */
+    min-width: 100%;
+    min-height: 100%;
+    object-fit: cover; /* Use cover on mobile to allow scrolling */
+  }
+  
+  /* Add scroll indicator for mobile */
+  .video-container::after {
+    content: "👆 Drag to pan around the video";
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    z-index: 10;
+    pointer-events: none;
+    animation: fadeInOut 3s ease-in-out;
+  }
+  
+  @keyframes fadeInOut {
+    0%, 100% { opacity: 0; }
+    20%, 80% { opacity: 1; }
   }
   
   .status-info {

@@ -15,6 +15,13 @@ function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [countdown, setCountdown] = useState(0);
   const [interval, setInterval] = useState(15); // Default 15 seconds
+  
+  // White balance controls
+  const [whiteBalance, setWhiteBalance] = useState({
+    red: 1.8,
+    blue: 1.0,
+    auto: true
+  });
 
   // Use countdown from backend (already calculated and synced)
   const getCountdown = (aiStatus) => {
@@ -185,6 +192,7 @@ function App() {
           });
         }
         
+        
         setAiStatus(newAiStatus);
         
         // Sync frontend interval state with backend
@@ -287,13 +295,13 @@ function App() {
   useEffect(() => {
     fetchPrinterStatus();
     fetchAiStatus();
-    // Auto-refresh every 8 seconds to prevent backend overload
+    // Auto-refresh every 2 seconds for faster response
     const interval = setInterval(() => {
       if (!isRetrying) { // Only poll if not currently retrying
         fetchPrinterStatus();
         fetchAiStatus();
       }
-    }, 8000); // Increased from 5s to 8s to reduce load
+    }, 2000); // Reduced from 8s to 2s for faster response
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -365,6 +373,27 @@ function App() {
       </div>
     );
   }
+
+  // White balance functions
+  const updateWhiteBalance = async (red, blue) => {
+    try {
+      await axios.post('/api/camera/wb', { red, blue });
+      setWhiteBalance(prev => ({ ...prev, red, blue, auto: false }));
+      console.log(`White balance updated: R=${red}, B=${blue}`);
+    } catch (error) {
+      console.error('Error updating white balance:', error);
+    }
+  };
+
+  const resetWhiteBalance = async () => {
+    try {
+      await axios.post('/api/camera/wb/reset');
+      setWhiteBalance(prev => ({ ...prev, auto: true }));
+      console.log('White balance reset to auto');
+    } catch (error) {
+      console.error('Error resetting white balance:', error);
+    }
+  };
 
   return (
     <ErrorBoundary>
@@ -456,25 +485,8 @@ function App() {
       )}
 
       <main className="dashboard">
-        <div className="main-grid">
-          {/* Video Stream */}
-          <div className="video-card">
-            <h2>Live Camera Feed</h2>
-            <div className="video-container">
-              {printerStatus?.is_running ? (
-                <img 
-                  src="/video_feed" 
-                  alt="3D Printer Camera Feed"
-                  className="video-stream"
-                />
-              ) : (
-                <div className="video-placeholder">
-                  <p>Camera feed will appear when monitoring starts</p>
-                </div>
-              )}
-            </div>
-          </div>
-
+        {/* Row 1: Print Status and Camera Controls */}
+        <div className="top-row">
           {/* Print Status */}
           <div className="print-status-card">
             <h2>Print Status</h2>
@@ -527,7 +539,79 @@ function App() {
                 {actionLoading ? 'Stopping...' : 'Stop Monitoring'}
               </button>
             </div>
-            
+          </div>
+        </div>
+
+        {/* Row 2: Live Camera Feed */}
+        <div className="video-card">
+          <h2>Live Camera Feed</h2>
+          
+          {/* Compact White Balance Controls */}
+          <div className="white-balance-controls">
+            <div className="wb-control-group">
+              <label>Red: {whiteBalance.red.toFixed(1)}</label>
+              <input
+                type="range"
+                min="0.5"
+                max="3.0"
+                step="0.1"
+                value={whiteBalance.red}
+                onChange={(e) => updateWhiteBalance(parseFloat(e.target.value), whiteBalance.blue)}
+                className="wb-slider red-slider"
+              />
+            </div>
+            <div className="wb-control-group">
+              <label>Blue: {whiteBalance.blue.toFixed(1)}</label>
+              <input
+                type="range"
+                min="0.5"
+                max="3.0"
+                step="0.1"
+                value={whiteBalance.blue}
+                onChange={(e) => updateWhiteBalance(whiteBalance.red, parseFloat(e.target.value))}
+                className="wb-slider blue-slider"
+              />
+            </div>
+            <button
+              onClick={resetWhiteBalance}
+              className={`wb-reset-btn ${whiteBalance.auto ? 'active' : ''}`}
+              title="Reset to Auto White Balance"
+            >
+              {whiteBalance.auto ? '🎨 Auto' : '🔄 Reset'}
+            </button>
+          </div>
+          
+          <div className="video-container">
+            {printerStatus?.is_running ? (
+              <>
+                <video 
+                  src="/h264_stream" 
+                  autoPlay 
+                  muted 
+                  playsInline
+                  className="video-stream"
+                  style={{display: 'block'}}
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'block';
+                  }}
+                />
+                <img 
+                  src="/video_feed" 
+                  alt="3D Printer Camera Feed"
+                  className="video-stream"
+                  style={{display: 'none'}}
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'block';
+                  }}
+                />
+              </>
+            ) : (
+              <div className="video-placeholder">
+                <p>Camera feed will appear when monitoring starts</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -634,7 +718,7 @@ function App() {
               </div>
 
               {/* AI Analysis Results */}
-              {aiStatus?.ai_response && (
+              {aiStatus?.ai_response && aiStatus.ai_response !== "No analysis yet." && (
                 <div className="ai-analysis-card">
                   <h3>Latest AI Analysis 
                     {aiStatus.last_ai_analysis && (
@@ -663,7 +747,7 @@ function App() {
               )}
 
               {/* AI Response Display */}
-              {aiStatus?.ai_response && (
+              {aiStatus?.ai_response && aiStatus.ai_response !== "No analysis yet." && (
                 <div className="ai-prompt-card">
                   <h3>🤖 Gemini AI Response</h3>
                   <div className="ai-prompt-content">
@@ -676,27 +760,6 @@ function App() {
             </div>
           </div>
 
-        {/* Status Information */}
-        <div className="status-info">
-          <div className="status-item">
-            <span className="status-label">Monitoring:</span>
-            <span className={`status-value ${printerStatus?.is_monitoring ? 'active' : 'inactive'}`}>
-              {printerStatus?.is_monitoring ? 'Active' : 'Inactive'}
-            </span>
-          </div>
-          <div className="status-item">
-            <span className="status-label">Video Stream:</span>
-            <span className={`status-value ${printerStatus?.video_stream_active ? 'active' : 'inactive'}`}>
-              {printerStatus?.video_stream_active ? 'Active' : 'Inactive'}
-            </span>
-          </div>
-          <div className="status-item">
-            <span className="status-label">System Time:</span>
-            <span className="status-value">
-              {printerStatus?.timestamp ? new Date(printerStatus.timestamp).toLocaleString() : 'Unknown'}
-            </span>
-          </div>
-        </div>
       </main>
       </div>
 
