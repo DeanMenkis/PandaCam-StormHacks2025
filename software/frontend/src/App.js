@@ -121,6 +121,52 @@ function App() {
 
   return (
     <div className="app">
+      {/* Animated Snow Background */}
+      <div className="snow-container">
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+        <div className="snowflake"></div>
+      </div>
+      
       <header className="app-header">
         <h1>3D Printer Monitoring System</h1>
         <div className="status-indicator">
