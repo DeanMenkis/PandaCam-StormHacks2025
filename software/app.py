@@ -52,7 +52,7 @@ printer_state = {
     "failure_detected": False,
     "last_failure_time": None,
     "video_stream_active": False,
-    "print_status": "idle",  # idle, printing, paused, completed, failed
+    "print_status": "idle",  # idle, printing, paused, completed, failed, warning, unknown
     "print_progress": 0,  # 0-100
     "print_time_elapsed": 0,  # in minutes
     "print_time_remaining": 0,  # in minutes
@@ -1255,8 +1255,29 @@ def start_printer():
             printer_state["timestamp"] = datetime.now().isoformat()
             result_state = printer_state.copy()
         
-        # Here you would start your actual printer monitoring application
-        # For now, we'll just update the state
+        # Start the monitoring service
+        try:
+            # Try to start monitoring service via subprocess
+            subprocess.Popen([
+                "python3", 
+                "/home/admin/Desktop/CircuitBreakers-StormHacks-2025/software/monitoring_service.py"
+            ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            
+            # Give it a moment to start
+            time.sleep(2)
+            
+            # Try to communicate with monitoring service to start AI monitoring
+            try:
+                response = requests.post(f"{MONITORING_SERVICE_URL}/start-ai-monitoring", timeout=5)
+                if response.status_code == 200:
+                    print("AI monitoring started successfully")
+                else:
+                    print("Warning: Could not start AI monitoring via API")
+            except:
+                print("Warning: Monitoring service API not available, but service may still be running")
+                
+        except Exception as e:
+            print(f"Warning: Could not start monitoring service: {e}")
         
         return jsonify({
             "success": True,
@@ -1294,7 +1315,16 @@ def stop_printer():
         global camera_active
         camera_active = False
         
-        # Here you would stop your actual printer monitoring application
+        # Stop the monitoring service
+        try:
+            # Try to stop AI monitoring via API
+            response = requests.post(f"{MONITORING_SERVICE_URL}/stop-ai-monitoring", timeout=5)
+            if response.status_code == 200:
+                print("AI monitoring stopped successfully")
+            else:
+                print("Warning: Could not stop AI monitoring via API")
+        except:
+            print("Warning: Monitoring service API not available")
         
         return jsonify({
             "success": True,
@@ -1358,6 +1388,9 @@ def update_print_status():
                 printer_state["print_time_elapsed"] = data["print_time_elapsed"]
             if "print_time_remaining" in data:
                 printer_state["print_time_remaining"] = data["print_time_remaining"]
+            if "ai_analysis" in data:
+                printer_state["ai_analysis"] = data["ai_analysis"]
+                printer_state["last_ai_analysis_time"] = datetime.now().isoformat()
             
             printer_state["timestamp"] = datetime.now().isoformat()
             
