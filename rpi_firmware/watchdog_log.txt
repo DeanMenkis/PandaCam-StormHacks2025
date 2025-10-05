@@ -639,3 +639,16 @@ Session started: 2025-10-05 04:23:38
 [04:23:41] ⚠️ Preview capture failed: returncode=255
 [04:23:42] ⚠️ Preview capture failed: returncode=255
 [04:24:01] 📹 Preview: 100 frames captured
+[04:24:53] 📹 Preview: 150 frames captured
+[04:25:46] 📹 Preview: 200 frames captured
+[04:26:38] 📹 Preview: 250 frames captured
+[04:27:29] 📹 Preview: 300 frames captured
+[04:27:43] 👋 Shutting down 3D Printer Watchdog...
+
+==================================================
+Session started: 2025-10-05 04:27:49
+==================================================
+[04:27:49] ✅ AI configuration loaded from ai_config.json
+[04:27:50] 📹 Starting live camera preview...
+[04:27:50] 📹 Preview worker started
+[04:27:50] 🚀 Modern 3D Printer Watchdog started successfully!
