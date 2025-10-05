@@ -70,6 +70,9 @@ ai_monitoring_thread = None
 ai_monitoring_active = False
 ai_monitoring_lock = threading.Lock()
 
+# Global state lock for thread safety
+printer_state_lock = threading.Lock()
+
 class CameraManager:
     def __init__(self):
         self.camera = None
@@ -786,31 +789,32 @@ def get_printer_status():
     """Get current printer monitoring status"""
     try:
         global printer_state
-        printer_state["timestamp"] = datetime.now().isoformat()
         
-        # Enhanced status with AI insights prominently displayed
-        enhanced_state = printer_state.copy()
+        # Thread-safe access to printer state - minimize lock time
+        with printer_state_lock:
+            printer_state["timestamp"] = datetime.now().isoformat()
+            enhanced_state = printer_state.copy()
         
-        # Add AI status summary for easy frontend consumption
-        if printer_state.get("ai_monitoring_active", False):
+        # Process AI status outside the lock to reduce lock time
+        if enhanced_state.get("ai_monitoring_active", False):
             ai_status_emoji = "🤖"
-            if printer_state.get("ai_response"):
-                if printer_state["ai_response"].startswith("✅"):
+            if enhanced_state.get("ai_response"):
+                if enhanced_state["ai_response"].startswith("✅"):
                     ai_status_emoji = "✅"
-                elif printer_state["ai_response"].startswith("⚠️"):
+                elif enhanced_state["ai_response"].startswith("⚠️"):
                     ai_status_emoji = "⚠️"
-                elif printer_state["ai_response"].startswith("❌"):
+                elif enhanced_state["ai_response"].startswith("❌"):
                     ai_status_emoji = "❌"
-                elif printer_state["ai_response"].startswith("🤷"):
+                elif enhanced_state["ai_response"].startswith("🤷"):
                     ai_status_emoji = "🤷"
             
             enhanced_state["ai_status_summary"] = {
                 "active": True,
                 "emoji": ai_status_emoji,
-                "status": printer_state.get("print_status", "idle"),
-                "confidence": printer_state.get("ai_confidence", 0.0),
-                "last_analysis": printer_state.get("last_ai_analysis"),
-                "response": printer_state.get("ai_response", "No analysis yet")
+                "status": enhanced_state.get("print_status", "idle"),
+                "confidence": enhanced_state.get("ai_confidence", 0.0),
+                "last_analysis": enhanced_state.get("last_ai_analysis"),
+                "response": enhanced_state.get("ai_response", "No analysis yet")
             }
         else:
             enhanced_state["ai_status_summary"] = {
@@ -839,10 +843,13 @@ def start_printer():
     """Start 3D printer monitoring"""
     try:
         global printer_state
-        printer_state["is_running"] = True
-        printer_state["is_monitoring"] = True
-        printer_state["failure_detected"] = False
-        printer_state["timestamp"] = datetime.now().isoformat()
+        
+        with printer_state_lock:
+            printer_state["is_running"] = True
+            printer_state["is_monitoring"] = True
+            printer_state["failure_detected"] = False
+            printer_state["timestamp"] = datetime.now().isoformat()
+            result_state = printer_state.copy()
         
         # Here you would start your actual printer monitoring application
         # For now, we'll just update the state
@@ -850,7 +857,7 @@ def start_printer():
         return jsonify({
             "success": True,
             "message": "Printer monitoring started",
-            "data": printer_state,
+            "data": result_state,
             "timestamp": datetime.now().isoformat()
         })
     except Exception as e:
@@ -865,10 +872,13 @@ def stop_printer():
     """Stop 3D printer monitoring"""
     try:
         global printer_state, video_process
-        printer_state["is_running"] = False
-        printer_state["is_monitoring"] = False
-        printer_state["video_stream_active"] = False
-        printer_state["timestamp"] = datetime.now().isoformat()
+        
+        with printer_state_lock:
+            printer_state["is_running"] = False
+            printer_state["is_monitoring"] = False
+            printer_state["video_stream_active"] = False
+            printer_state["timestamp"] = datetime.now().isoformat()
+            result_state = printer_state.copy()
         
         # Stop AI monitoring if active
         if ai_monitoring_active:

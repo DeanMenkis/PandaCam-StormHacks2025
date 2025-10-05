@@ -10,28 +10,60 @@ function App() {
   const [actionLoading, setActionLoading] = useState(false);
   const [aiStatus, setAiStatus] = useState(null);
 
-  const fetchPrinterStatus = async () => {
+  const fetchPrinterStatus = async (retryCount = 0) => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/printer/status');
+      const response = await axios.get('/api/printer/status', { timeout: 10000 });
       if (response.data.success) {
-        setPrinterStatus(response.data.data);
+        const newStatus = response.data.data;
+        
+        // Debug logging for status changes
+        if (printerStatus && (
+          printerStatus.print_status !== newStatus.print_status ||
+          printerStatus.is_running !== newStatus.is_running ||
+          printerStatus.failure_detected !== newStatus.failure_detected
+        )) {
+          console.log('📊 Status Change Detected:', {
+            old_print_status: printerStatus.print_status,
+            new_print_status: newStatus.print_status,
+            old_is_running: printerStatus.is_running,
+            new_is_running: newStatus.is_running,
+            old_failure: printerStatus.failure_detected,
+            new_failure: newStatus.failure_detected,
+            timestamp: new Date().toLocaleTimeString()
+          });
+        }
+        
+        setPrinterStatus(newStatus);
         setLastUpdated(new Date().toLocaleTimeString());
         setError(null);
       } else {
         setError('Failed to fetch printer status');
       }
     } catch (err) {
-      setError('Error connecting to backend: ' + err.message);
       console.error('Error fetching printer status:', err);
+      
+      // Retry logic for network issues and timeouts
+      if (retryCount < 2 && (err.code === 'ECONNABORTED' || err.code === 'NETWORK_ERROR' || err.message.includes('timeout'))) {
+        console.log(`🔄 Retrying printer status fetch (attempt ${retryCount + 1}) - ${err.message}`);
+        setTimeout(() => fetchPrinterStatus(retryCount + 1), 2000);
+        return;
+      }
+      
+      // More user-friendly error messages
+      if (err.message.includes('timeout')) {
+        setError('Backend is slow to respond - retrying...');
+      } else {
+        setError('Error connecting to backend: ' + err.message);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchAiStatus = async () => {
+  const fetchAiStatus = async (retryCount = 0) => {
     try {
-      const response = await axios.get('/api/ai/status');
+      const response = await axios.get('/api/ai/status', { timeout: 10000 });
       if (response.data.success) {
         const newAiStatus = response.data.data;
         
@@ -50,6 +82,13 @@ function App() {
       }
     } catch (err) {
       console.error('Error fetching AI status:', err);
+      
+      // Retry logic for network issues and timeouts
+      if (retryCount < 2 && (err.code === 'ECONNABORTED' || err.code === 'NETWORK_ERROR' || err.message.includes('timeout'))) {
+        console.log(`🔄 Retrying AI status fetch (attempt ${retryCount + 1}) - ${err.message}`);
+        setTimeout(() => fetchAiStatus(retryCount + 1), 2000);
+        return;
+      }
     }
   };
 
@@ -124,7 +163,7 @@ function App() {
   useEffect(() => {
     fetchPrinterStatus();
     fetchAiStatus();
-    // Auto-refresh every 3 seconds
+    // Auto-refresh every 3 seconds to balance responsiveness and performance
     const interval = setInterval(() => {
       fetchPrinterStatus();
       fetchAiStatus();
