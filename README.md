@@ -1,9 +1,7 @@
 # Circuit Breakers StormHacks 2025
 ## 3D Printer Watchdog - AI-Powered Print Monitoring System
 
-**V I B E  C O D I N G** 🚀
-
-### 🎯 Project Overview
+### 🎯 Project Overview -- PANDACAM
 An intelligent 3D printer monitoring system that uses AI-powered image analysis to watch your prints in real-time. Built for StormHacks 2025 by Team Circuit Breakers.
 
 ### ✨ Features
@@ -49,7 +47,3 @@ python3 watchdog_app.py
 3. **Auto Monitoring**: Use "▶️ Start Monitoring" for periodic captures
 4. **Adjust Interval**: Use the slider to set monitoring frequency (5-60 seconds)
 
-### 🏆 Team Circuit Breakers
-Built with passion for StormHacks 2025! 
-
-*Keep calm and keep printing!* 🖨️✨ 
